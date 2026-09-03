@@ -49,6 +49,8 @@ public class MixinMouse {
             if (freeLook.shouldRotate()) {
                 if (this.minecraft.player != null) {
                     this.minecraft.player.turn(k, l * (double)m);
+                    this.minecraft.player.setYRot(freeLook.getCameraYaw());
+                    this.minecraft.player.setXRot(freeLook.getCameraPitch());
                 }
             }
             ci.cancel();
