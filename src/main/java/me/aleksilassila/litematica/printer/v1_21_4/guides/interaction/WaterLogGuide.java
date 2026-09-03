@@ -7,18 +7,18 @@ import me.aleksilassila.litematica.printer.v1_21_4.actions.*;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.placement.GeneralPlacementGuide;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.UseItemActionImpl;
-import net.minecraft.block.Waterloggable;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.world.level.block.SimpleWaterloggedBlock;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -35,25 +35,25 @@ public class WaterLogGuide extends GeneralPlacementGuide {
 
     public WaterLogGuide(SchematicBlockState state) {
         super(state);
-        canWork = state.targetState.getBlock() instanceof Waterloggable;
+        canWork = state.targetState.getBlock() instanceof SimpleWaterloggedBlock;
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!canWork) return false;
-        if (!(currentState.getBlock() instanceof Waterloggable)) return false;
+        if (!(currentState.getBlock() instanceof SimpleWaterloggedBlock)) return false;
 
-        if (currentState.get(Properties.WATERLOGGED) == null
-                || currentState.get(Properties.WATERLOGGED) == targetState.get(Properties.WATERLOGGED)) {
+        if (currentState.getValue(BlockStateProperties.WATERLOGGED) == null
+                || currentState.getValue(BlockStateProperties.WATERLOGGED) == targetState.getValue(BlockStateProperties.WATERLOGGED)) {
             return false;
         }
 
 //        if (!super.canExecute(player)) return false;
         List<ItemStack> requiredItems = getRequiredItems();
-        if (requiredItems.isEmpty() || requiredItems.stream().allMatch(i -> i.isOf(Items.AIR)))
+        if (requiredItems.isEmpty() || requiredItems.stream().allMatch(i -> i.is(Items.AIR)))
             return false;
         for (Direction side : getPossibleSides()) {
-            if (canSeeBlockFace(player, new BlockHitResult(Vec3d.ofCenter(state.blockPos), side.getOpposite(), state.blockPos.offset(side), false))) {
+            if (canSeeBlockFace(player, new BlockHitResult(Vec3.atCenterOf(state.blockPos), side.getOpposite(), state.blockPos.relative(side), false))) {
                 return true;
             }
         }
@@ -67,12 +67,12 @@ public class WaterLogGuide extends GeneralPlacementGuide {
     }
 
     @Override
-    public @Nullable PrinterPlacementContext getPlacementContext(ClientPlayerEntity player) {
-        ClientWorld world = MinecraftClient.getInstance().world;
+    public @Nullable PrinterPlacementContext getPlacementContext(LocalPlayer player) {
+        ClientLevel world = Minecraft.getInstance().level;
         if (world == null) return null;
 
-        Vec3d[] hitVecsToTryArray = getPossibleHitVecs();
-        Vec3d playerEyePos = player.getEyePos();
+        Vec3[] hitVecsToTryArray = getPossibleHitVecs();
+        Vec3 playerEyePos = player.getEyePosition();
 
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);
         int slot = getRequiredItemStackSlot(player);
@@ -80,31 +80,31 @@ public class WaterLogGuide extends GeneralPlacementGuide {
         if (slot == -1) return null;
 
         for (Direction side : getPossibleSides()) {
-            Vec3d hitVec = Vec3d.ofCenter(state.blockPos)
-                    .add(Vec3d.of(side.getVector()).multiply(0.5)); // Center of the block side face we are placing on
+            Vec3 hitVec = Vec3.atCenterOf(state.blockPos)
+                    .add(new Vec3(side.step()).scale(0.5)); // Center of the block side face we are placing on
 
-            for (Vec3d hitVecToTry : hitVecsToTryArray) {
-                Vec3d multiplier = Vec3d.of(side.getVector());
-                multiplier = new Vec3d(
+            for (Vec3 hitVecToTry : hitVecsToTryArray) {
+                Vec3 multiplier = new Vec3(side.step());
+                multiplier = new Vec3(
                         multiplier.x == 0 ? 1 : 0,
                         multiplier.y == 0 ? 1 : 0,
                         multiplier.z == 0 ? 1 : 0); // Offset from the Center of the block side face we are placing on by pre calculated values. This samples different points on that face.
 
-                Vec3d blockHit = hitVec.add(hitVecToTry.multiply(multiplier));
-                Vec3d lookDirection = blockHit.subtract(playerEyePos).normalize();
-                Direction relativeDirection = Direction.getFacing(lookDirection.x, lookDirection.y, lookDirection.z);
+                Vec3 blockHit = hitVec.add(hitVecToTry.multiply(multiplier));
+                Vec3 lookDirection = blockHit.subtract(playerEyePos).normalize();
+                Direction relativeDirection = Direction.getApproximateNearest(lookDirection.x, lookDirection.y, lookDirection.z);
 
                 if (playerEyePos.distanceTo(blockHit) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) // Check if the hit vector is in range
                     continue;
 
-                Vec3d lookVec = blockHit.subtract(playerEyePos).normalize(); // Look vector from the player's eye to the block hit vector
-                Vec3d raycastEnd = playerEyePos.add(lookVec.multiply(5)); // 5 block max distance
-                RaycastContext raycastContext = new RaycastContext(playerEyePos, raycastEnd, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, player);
-                BlockHitResult result = world.raycast(raycastContext);
+                Vec3 lookVec = blockHit.subtract(playerEyePos).normalize(); // Look vector from the player's eye to the block hit vector
+                Vec3 raycastEnd = playerEyePos.add(lookVec.scale(5)); // 5 block max distance
+                ClipContext raycastContext = new ClipContext(playerEyePos, raycastEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
+                BlockHitResult result = world.clip(raycastContext);
                 if (result.getType() != HitResult.Type.BLOCK || !result.getBlockPos().equals(state.blockPos)) { // If we didn't hit a block, skip
                     continue;
                 }
-                if (result.getPos().distanceTo(playerEyePos) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) { // Check if the hit result is in range
+                if (result.getLocation().distanceTo(playerEyePos) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) { // Check if the hit result is in range
                     continue;
                 }
 
@@ -118,7 +118,7 @@ public class WaterLogGuide extends GeneralPlacementGuide {
     }
 
     @Override
-    public @NotNull List<Action> execute(ClientPlayerEntity player) {
+    public @NotNull List<Action> execute(LocalPlayer player) {
         List<Action> actions = new ArrayList<>();
 
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);

@@ -7,15 +7,15 @@ import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.UpdateChecker;
-import net.minecraft.block.entity.BlockEntity;
-import net.minecraft.block.entity.SignBlockEntity;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.AbstractClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.world.ClientWorld;
-import net.minecraft.network.packet.c2s.play.UpdateSignC2SPacket;
-import net.minecraft.text.Text;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.entity.SignBlockEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.AbstractClientPlayer;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.network.protocol.game.ServerboundSignUpdatePacket;
+import net.minecraft.network.chat.Component;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
@@ -24,17 +24,17 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 import java.util.Optional;
 
-@Mixin(ClientPlayerEntity.class)
-public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
+@Mixin(LocalPlayer.class)
+public class MixinClientPlayerEntity extends AbstractClientPlayer {
 
     private static boolean didCheckForUpdates = false;
 
     @Shadow
-    protected MinecraftClient client;
+    protected Minecraft minecraft;
     @Shadow
-    public ClientPlayNetworkHandler networkHandler;
+    public ClientPacketListener connection;
 
-    public MixinClientPlayerEntity(ClientWorld world, GameProfile profile) {
+    public MixinClientPlayerEntity(ClientLevel world, GameProfile profile) {
         super(world, profile);
     }
 
@@ -47,7 +47,7 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
         }
 
         if (LitematicaMixinMod.freeLook.getPrevPerspective() == null) {
-            LitematicaMixinMod.freeLook.setPrevPerspective(client.options.getPerspective());
+            LitematicaMixinMod.freeLook.setPrevPerspective(minecraft.options.getCameraType());
         }
         if (LitematicaMixinMod.printer != null) {
 //            LitematicaMixinMod.printer.actionHandler.onPostTick();
@@ -56,10 +56,10 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
 
     @Inject(at = @At("HEAD"), method = "tick")
     public void tickHead(CallbackInfo ci) {
-        ClientPlayerEntity clientPlayer = (ClientPlayerEntity) (Object) this;
+        LocalPlayer clientPlayer = (LocalPlayer) (Object) this;
         if (LitematicaMixinMod.printer == null || LitematicaMixinMod.printer.player != clientPlayer) {
-            System.out.println("Initializing printer, player: " + clientPlayer + ", client: " + client);
-            LitematicaMixinMod.printer = new Printer(client, clientPlayer);
+            System.out.println("Initializing printer, player: " + clientPlayer + ", client: " + minecraft);
+            LitematicaMixinMod.printer = new Printer(minecraft, clientPlayer);
         }
         LitematicaMixinMod.printer.actionHandler.processPreviousTickActions();
         LitematicaMixinMod.printer.onGameTick();
@@ -75,28 +75,30 @@ public class MixinClientPlayerEntity extends AbstractClientPlayerEntity {
             String newVersion = UpdateChecker.getPrinterVersion();
 
             if (!version.equals(newVersion)) {
-                client.inGameHud.getChatHud().addMessage(Text.literal("New version of Litematica Printer available in https://github.com/aleksilassila/litematica-printer/releases"));
+                if (minecraft.player != null) {
+                    minecraft.gui.getChat().addMessage(Component.literal("New version of Litematica Printer available in https://github.com/aleksilassila/litematica-printer/releases"));
+                }
             }
         }).start();
     }
 
-    @Inject(method = "openEditSignScreen", at = @At("HEAD"), cancellable = true)
+    @Inject(method = "openTextEdit", at = @At("HEAD"), cancellable = true)
     public void openEditSignScreen(SignBlockEntity sign, boolean front, CallbackInfo ci) {
         getTargetSignEntity(sign).ifPresent(signBlockEntity -> {
-            UpdateSignC2SPacket packet = new UpdateSignC2SPacket(sign.getPos(),
+            ServerboundSignUpdatePacket packet = new ServerboundSignUpdatePacket(sign.getBlockPos(),
                     front,
                     signBlockEntity.getText(front).getMessage(0, false).getString(),
                     signBlockEntity.getText(front).getMessage(1, false).getString(),
                     signBlockEntity.getText(front).getMessage(2, false).getString(),
                     signBlockEntity.getText(front).getMessage(3, false).getString());
-            this.networkHandler.sendPacket(packet);
+            this.connection.send(packet);
             ci.cancel();
         });
     }
 
     private Optional<SignBlockEntity> getTargetSignEntity(SignBlockEntity sign) {
         WorldSchematic worldSchematic = SchematicWorldHandler.getSchematicWorld();
-        SchematicBlockState state = new SchematicBlockState(sign.getWorld(), worldSchematic, sign.getPos());
+        SchematicBlockState state = new SchematicBlockState(sign.getLevel(), worldSchematic, sign.getBlockPos());
 
         BlockEntity targetBlockEntity = worldSchematic.getBlockEntity(state.blockPos);
 

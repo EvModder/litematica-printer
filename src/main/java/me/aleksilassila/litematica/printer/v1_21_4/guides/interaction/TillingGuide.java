@@ -2,10 +2,10 @@ package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.placement.FarmlandGuide;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -26,7 +26,7 @@ public class TillingGuide extends InteractionGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!super.canExecute(player)) return false;
 
         return Arrays.stream(FarmlandGuide.TILLABLE_BLOCKS).anyMatch(b -> b == currentState.getBlock());

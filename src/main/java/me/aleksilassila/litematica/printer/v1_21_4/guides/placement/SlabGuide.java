@@ -1,10 +1,10 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.SlabBlock;
-import net.minecraft.block.enums.SlabType;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.SlabBlock;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.core.Direction;
 
 import java.util.Arrays;
 import java.util.List;
@@ -26,10 +26,10 @@ public class SlabGuide extends GeneralPlacementGuide {
         BlockState targetState = state.targetState;
         BlockState currentState = state.currentState;
 
-        if (!currentState.contains(SlabBlock.TYPE)) {
-            return targetState.get(SlabBlock.TYPE) == SlabType.TOP ? Direction.UP : Direction.DOWN;
-        } else if (currentState.get(SlabBlock.TYPE) != targetState.get(SlabBlock.TYPE)) {
-            return currentState.get(SlabBlock.TYPE) == SlabType.TOP ? Direction.DOWN : Direction.UP;
+        if (!currentState.hasProperty(SlabBlock.TYPE)) {
+            return targetState.getValue(SlabBlock.TYPE) == SlabType.TOP ? Direction.UP : Direction.DOWN;
+        } else if (currentState.getValue(SlabBlock.TYPE) != targetState.getValue(SlabBlock.TYPE)) {
+            return currentState.getValue(SlabBlock.TYPE) == SlabType.TOP ? Direction.DOWN : Direction.UP;
         } else {
             return Direction.DOWN;
         }

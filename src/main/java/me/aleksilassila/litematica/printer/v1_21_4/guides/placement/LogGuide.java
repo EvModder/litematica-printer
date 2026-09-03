@@ -3,11 +3,11 @@ package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.interaction.LogStrippingGuide;
-import net.minecraft.block.Block;
-import net.minecraft.block.PillarBlock;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.RotatedPillarBlock;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.Direction;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -22,8 +22,8 @@ public class LogGuide extends GeneralPlacementGuide {
 
     @Override
     protected List<Direction> getPossibleSides() {
-        if (targetState.contains(PillarBlock.AXIS)) {
-            Direction.Axis axis = targetState.get(PillarBlock.AXIS);
+        if (targetState.hasProperty(RotatedPillarBlock.AXIS)) {
+            Direction.Axis axis = targetState.getValue(RotatedPillarBlock.AXIS);
             return Arrays.stream(Direction.values()).filter(d -> d.getAxis() == axis).toList();
         }
 
@@ -42,7 +42,7 @@ public class LogGuide extends GeneralPlacementGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!LitematicaMixinMod.STRIP_LOGS.getBooleanValue()) return false;
 
         if (LogStrippingGuide.STRIPPED_BLOCKS.containsValue(targetState.getBlock())) {

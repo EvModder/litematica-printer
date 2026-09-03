@@ -8,13 +8,13 @@ import me.aleksilassila.litematica.printer.v1_21_4.actions.Action;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guide;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guides;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerAbilities;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec2f;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Abilities;
+import net.minecraft.core.BlockPos;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec2;
+import net.minecraft.world.phys.Vec3;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.jetbrains.annotations.NotNull;
@@ -27,8 +27,8 @@ import java.util.List;
 public class Printer {
     public static final Logger logger = LogManager.getLogger("litematica-printer");
     @NotNull
-    public final ClientPlayerEntity player;
-    MinecraftClient mc = MinecraftClient.getInstance();
+    public final LocalPlayer player;
+    Minecraft mc = Minecraft.getInstance();
 
     public final ActionHandler actionHandler;
 
@@ -38,17 +38,17 @@ public class Printer {
     static final LinkedList<BlockTimeout> blockPosTimeout = new LinkedList<>();
     int delayCounter = 0;
     @Nullable
-    public static Vec2f lastRotation = null;
+    public static Vec2 lastRotation = null;
 
-    public Printer(@NotNull MinecraftClient client, @NotNull ClientPlayerEntity player) {
+    public Printer(@NotNull Minecraft client, @NotNull LocalPlayer player) {
         this.player = player;
 
         this.actionHandler = new ActionHandler(client, player);
     }
 
     public void onMiddleClick() {
-        if (mc.world == null || mc.player == null) return;
-        BlockPos pos = RayTraceUtils.getSchematicWorldTraceIfClosest(mc.world, mc.player, 6.0);
+        if (mc.level == null || mc.player == null) return;
+        BlockPos pos = RayTraceUtils.getSchematicWorldTraceIfClosest(mc.level, mc.player, 6.0);
 
         if (pos != null) {
             WorldSchematic world = SchematicWorldHandler.getSchematicWorld();
@@ -78,14 +78,14 @@ public class Printer {
         if (!LitematicaMixinMod.PRINT_MODE.getBooleanValue() && !LitematicaMixinMod.PRINT.getKeybind().isPressed())
             return false;
 
-        PlayerAbilities abilities = player.getAbilities();
-        if (!abilities.allowModifyWorld)
+        Abilities abilities = player.getAbilities();
+        if (!abilities.mayBuild)
             return false;
 
-        if (PrinterConfig.STOP_ON_MOVEMENT.getBooleanValue() && player.getVelocity().length() > 0.1)
+        if (PrinterConfig.STOP_ON_MOVEMENT.getBooleanValue() && player.getDeltaMovement().length() > 0.1)
             return false; // Stop if the player is moving
         if (PrinterConfig.PRINTER_DISABLE_IN_GUIS.getBooleanValue()) {
-            if (mc.currentScreen != null) return false;
+            if (mc.screen != null) return false;
         }
 
         List<BlockPos> positions = getReachablePositions();
@@ -96,7 +96,7 @@ public class Printer {
 
         findBlock:
         for (BlockPos position : positions) {
-            SchematicBlockState state = new SchematicBlockState(player.getWorld(), worldSchematic, position);
+            SchematicBlockState state = new SchematicBlockState(player.level(), worldSchematic, position);
             if (state.targetState.equals(state.currentState) || state.targetState.isAir()) continue;
 
             Guide[] guides = interactionGuides.getInteractionGuides(state);
@@ -116,32 +116,32 @@ public class Printer {
 
     private List<BlockPos> getBlocksPlayerOccupied() {
         ArrayList<BlockPos> positions = new ArrayList<>();
-        BlockPos playerPos = player.getBlockPos();
-        int blocksHeightOccupied = (int) Math.ceil(player.getPos().y + player.getHeight() - playerPos.getY());
+        BlockPos playerPos = player.blockPosition();
+        int blocksHeightOccupied = (int) Math.ceil(player.position().y + player.getBbHeight() - playerPos.getY());
 
-        positions.add(player.getBlockPos());
-        positions.add(player.getBlockPos().up());
+        positions.add(player.blockPosition());
+        positions.add(player.blockPosition().above());
         if (blocksHeightOccupied > 2) {
-            positions.add(playerPos.up(2));
+            positions.add(playerPos.above(2));
         }
-        if (Math.floor(player.getPos().x + player.getWidth() / 2) > playerPos.getX()) {
+        if (Math.floor(player.position().x + player.getBbWidth() / 2) > playerPos.getX()) {
             for (int i = 0; i < blocksHeightOccupied; i++) {
-                positions.add(playerPos.up(i).east());
+                positions.add(playerPos.above(i).east());
             }
         }
-        if ((player.getPos().x - player.getWidth() / 2) < playerPos.getX()) {
+        if ((player.position().x - player.getBbWidth() / 2) < playerPos.getX()) {
             for (int i = 0; i < blocksHeightOccupied; i++) {
-                positions.add(playerPos.up(i).west());
+                positions.add(playerPos.above(i).west());
             }
         }
-        if (Math.floor(player.getPos().z + player.getWidth() / 2) > playerPos.getZ()) {
+        if (Math.floor(player.position().z + player.getBbWidth() / 2) > playerPos.getZ()) {
             for (int i = 0; i < blocksHeightOccupied; i++) {
-                positions.add(playerPos.up(i).south());
+                positions.add(playerPos.above(i).south());
             }
         }
-        if ((player.getPos().z - player.getWidth() / 2) < playerPos.getZ()) {
+        if ((player.position().z - player.getBbWidth() / 2) < playerPos.getZ()) {
             for (int i = 0; i < blocksHeightOccupied; i++) {
-                positions.add(playerPos.up(i).north());
+                positions.add(playerPos.above(i).north());
             }
         }
         return positions.stream().distinct().toList();
@@ -150,17 +150,17 @@ public class Printer {
     private List<BlockPos> getReachablePositions() {
         List<BlockPos> playerOccupied = getBlocksPlayerOccupied();
         int maxReach = (int) Math.ceil(LitematicaMixinMod.PRINTING_RANGE.getDoubleValue());
-        double maxReachSquared = MathHelper.square(LitematicaMixinMod.PRINTING_RANGE.getDoubleValue());
+        double maxReachSquared = Mth.square(LitematicaMixinMod.PRINTING_RANGE.getDoubleValue());
 
         ArrayList<BlockPos> positions = new ArrayList<>();
 
         for (int y = -maxReach; y < maxReach + 1; y++) {
             for (int x = -maxReach; x < maxReach + 1; x++) {
                 for (int z = -maxReach; z < maxReach + 1; z++) {
-                    BlockPos blockPos = player.getBlockPos().north(x).west(z).up(y);
+                    BlockPos blockPos = player.blockPosition().north(x).west(z).above(y);
 
                     if (!DataManager.getRenderLayerRange().isPositionWithinRange(blockPos)) continue;
-                    if (this.player.getEyePos().squaredDistanceTo(Vec3d.ofCenter(blockPos)) > maxReachSquared) {
+                    if (this.player.getEyePosition().distanceToSqr(Vec3.atCenterOf(blockPos)) > maxReachSquared) {
                         continue;
                     }
 
@@ -172,8 +172,8 @@ public class Printer {
         return positions.stream()
 //                .filter(p -> playerOccupied.stream().noneMatch(p::equals))
                 .sorted((a, b) -> {
-                    double aDistance = this.player.getPos().squaredDistanceTo(Vec3d.ofCenter(a));
-                    double bDistance = this.player.getPos().squaredDistanceTo(Vec3d.ofCenter(b));
+                    double aDistance = this.player.position().distanceToSqr(Vec3.atCenterOf(a));
+                    double bDistance = this.player.position().distanceToSqr(Vec3.atCenterOf(b));
                     return Double.compare(aDistance, bDistance);
                 }).toList();
     }
@@ -184,8 +184,8 @@ public class Printer {
 
     public void rotate(float yaw, float pitch) {
         LitematicaMixinMod.freeLook.ticksSinceLastRotation = 0;
-        this.player.setYaw(yaw);
-        this.player.setPitch(pitch);
+        this.player.setYRot(yaw);
+        this.player.setXRot(pitch);
     }
 
     public static class BlockTimeout {

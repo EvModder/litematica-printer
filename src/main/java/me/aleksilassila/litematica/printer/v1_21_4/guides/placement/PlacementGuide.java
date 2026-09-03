@@ -7,20 +7,21 @@ import me.aleksilassila.litematica.printer.v1_21_4.guides.Guide;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.AirPlaceAction;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.InteractActionImpl;
-import net.minecraft.block.*;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.BlockItem;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
-import net.minecraft.util.function.BooleanBiFunction;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Box;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.shape.VoxelShape;
-import net.minecraft.util.shape.VoxelShapes;
-import net.minecraft.world.World;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
+import net.minecraft.world.phys.shapes.BooleanOp;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.phys.AABB;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.phys.shapes.Shapes;
+import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,17 +34,17 @@ import java.util.Optional;
  * Guide that clicks its neighbors to create a placement in target position.
  */
 abstract public class PlacementGuide extends Guide {
-    MinecraftClient mc = MinecraftClient.getInstance();
+    Minecraft mc = Minecraft.getInstance();
 
     public PlacementGuide(SchematicBlockState state) {
         super(state);
     }
 
     protected ItemStack getBlockItem(BlockState state) {
-        return state.getBlock().asItem().getDefaultStack();
+        return state.getBlock().asItem().getDefaultInstance();
     }
 
-    protected Optional<Block> getRequiredItemAsBlock(ClientPlayerEntity player) {
+    protected Optional<Block> getRequiredItemAsBlock(LocalPlayer player) {
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);
 
         if (requiredItem.isEmpty()) {
@@ -63,10 +64,10 @@ abstract public class PlacementGuide extends Guide {
     abstract protected boolean getUseShift(SchematicBlockState state);
 
     @Nullable
-    abstract public PrinterPlacementContext getPlacementContext(ClientPlayerEntity player);
+    abstract public PrinterPlacementContext getPlacementContext(LocalPlayer player);
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!super.canExecute(player)) return false;
 
         if (targetState.getBlock() == currentState.getBlock()) {
@@ -74,15 +75,15 @@ abstract public class PlacementGuide extends Guide {
         }
 
         List<ItemStack> requiredItems = getRequiredItems();
-        if (requiredItems.isEmpty() || requiredItems.stream().allMatch(i -> i.isOf(Items.AIR)))
+        if (requiredItems.isEmpty() || requiredItems.stream().allMatch(i -> i.is(Items.AIR)))
             return false;
 
-        ItemPlacementContext ctx = getPlacementContext(player);
+        BlockPlaceContext ctx = getPlacementContext(player);
         if (ctx == null || !ctx.canPlace()) return false;
 
         BlockState resultState = getRequiredItemAsBlock(player)
                 .orElse(targetState.getBlock())
-                .getPlacementState(ctx);
+                .getStateForPlacement(ctx);
 
         if (resultState != null) {
             if (collidesWithPlayer(resultState)) {
@@ -91,8 +92,8 @@ abstract public class PlacementGuide extends Guide {
                 }
                 return false;
             }
-            if (!resultState.canPlaceAt(state.world, state.blockPos)) return false;
-            return !(currentState.getBlock() instanceof FluidBlock) || canPlaceInWater(resultState);
+            if (!resultState.canSurvive(state.world, state.blockPos)) return false;
+            return !(currentState.getBlock() instanceof LiquidBlock) || canPlaceInWater(resultState);
         } else {
             return false;
         }
@@ -100,9 +101,9 @@ abstract public class PlacementGuide extends Guide {
     }
 
     public boolean isInAir(BlockPos pos) {
-        if (mc.world == null) return false;
+        if (mc.level == null) return false;
         for (Direction dir : Direction.values()) {
-            if (!mc.world.getBlockState(pos.offset(dir)).isAir()) {
+            if (!mc.level.getBlockState(pos.relative(dir)).isAir()) {
                 return false;
             }
         }
@@ -110,17 +111,17 @@ abstract public class PlacementGuide extends Guide {
     }
 
     private boolean collidesWithPlayer(BlockState blockState) {
-        if (mc.player == null || mc.world == null) return true;
+        if (mc.player == null || mc.level == null) return true;
 
         VoxelShape shape = blockState.getCollisionShape(state.schematic, state.blockPos);
         if (shape.isEmpty()) return false;
-        shape = shape.offset(state.blockPos.getX(), state.blockPos.getY(), state.blockPos.getZ());
-        Box playerShape = mc.player.getBoundingBox();
-        return VoxelShapes.matchesAnywhere(VoxelShapes.cuboid(playerShape), shape, BooleanBiFunction.AND);
+        shape = shape.move(state.blockPos.getX(), state.blockPos.getY(), state.blockPos.getZ());
+        AABB playerShape = mc.player.getBoundingBox();
+        return Shapes.joinIsNotEmpty(Shapes.create(playerShape), shape, BooleanOp.AND);
     }
 
     @Override
-    public @NotNull List<Action> execute(ClientPlayerEntity player) {
+    public @NotNull List<Action> execute(LocalPlayer player) {
         List<Action> actions = new ArrayList<>();
         PrinterPlacementContext ctx = getPlacementContext(player);
 
@@ -145,7 +146,7 @@ abstract public class PlacementGuide extends Guide {
             }
         }
 
-        boolean shiftDown = mc.player.input.playerInput.sneak();
+        boolean shiftDown = mc.player.input.keyPresses.shift();
         actionChain.addImmediateAction(new PrepareLook(ctx));
         if (ctx.shouldSneak && !shiftDown) actionChain.addImmediateAction(new PresShift());
         actionChain.addNextTickAction(new PrepareAction(ctx));
@@ -156,12 +157,12 @@ abstract public class PlacementGuide extends Guide {
         return actions;
     }
 
-    protected static boolean canBeClicked(World world, BlockPos pos) {
-        return getOutlineShape(world, pos) != VoxelShapes.empty() && !(world.getBlockState(pos).getBlock() instanceof AbstractSignBlock); // FIXME signs
+    protected static boolean canBeClicked(Level world, BlockPos pos) {
+        return getOutlineShape(world, pos) != Shapes.empty() && !(world.getBlockState(pos).getBlock() instanceof SignBlock); // FIXME signs
     }
 
-    private static VoxelShape getOutlineShape(World world, BlockPos pos) {
-        return world.getBlockState(pos).getOutlineShape(world, pos);
+    private static VoxelShape getOutlineShape(Level world, BlockPos pos) {
+        return world.getBlockState(pos).getShape(world, pos);
     }
 
     public boolean isInteractive(Block block) {
@@ -176,16 +177,16 @@ abstract public class PlacementGuide extends Guide {
 
     private boolean canPlaceInWater(BlockState blockState) {
         Block block = blockState.getBlock();
-        if (block instanceof FluidFillable) {
+        if (block instanceof SimpleWaterloggedBlock) {
             return true;
-        } else if (!(block instanceof DoorBlock) && !(blockState.getBlock() instanceof AbstractSignBlock) && !blockState.isOf(Blocks.LADDER) && !blockState.isOf(Blocks.SUGAR_CANE) && !blockState.isOf(Blocks.BUBBLE_COLUMN)) {
+        } else if (!(block instanceof DoorBlock) && !(blockState.getBlock() instanceof SignBlock) && !blockState.is(Blocks.LADDER) && !blockState.is(Blocks.SUGAR_CANE) && !blockState.is(Blocks.BUBBLE_COLUMN)) {
 //            Material material = blockState.getMaterial();
 //            if (material != Material.PORTAL && material != Material.STRUCTURE_VOID && material != Material.UNDERWATER_PLANT && material != Material.REPLACEABLE_UNDERWATER_PLANT) {
-//                return material.blocksMovement();
+//                return material.blocksMotion();
 //            } else {
 //                return true;
 //            }
-            return blockState.blocksMovement();
+            return blockState.blocksMotion();
         }
 
         return true;

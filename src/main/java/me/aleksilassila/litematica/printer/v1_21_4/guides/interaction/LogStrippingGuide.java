@@ -3,11 +3,11 @@ package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.mixin.AxeItemAccessor;
-import net.minecraft.block.Block;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -31,7 +31,7 @@ public class LogStrippingGuide extends InteractionGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!LitematicaMixinMod.STRIP_LOGS.getBooleanValue()) return false;
 
         if (!super.canExecute(player)) return false;

@@ -8,11 +8,11 @@ import me.aleksilassila.litematica.printer.v1_21_4.actions.PrepareAction;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.ReleaseShiftAction;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guide;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.InteractActionImpl;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -27,10 +27,10 @@ public abstract class InteractionGuide extends Guide {
     }
 
     @Override
-    public @NotNull List<Action> execute(ClientPlayerEntity player) {
+    public @NotNull List<Action> execute(LocalPlayer player) {
         List<Action> actions = new ArrayList<>();
 
-        BlockHitResult hitResult = new BlockHitResult(Vec3d.ofCenter(state.blockPos), Direction.UP, state.blockPos, false);
+        BlockHitResult hitResult = new BlockHitResult(Vec3.atCenterOf(state.blockPos), Direction.UP, state.blockPos, false);
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);
         int requiredSlot = getRequiredItemStackSlot(player);
 

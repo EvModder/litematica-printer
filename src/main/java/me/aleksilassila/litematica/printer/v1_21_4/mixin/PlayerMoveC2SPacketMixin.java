@@ -3,12 +3,12 @@ package me.aleksilassila.litematica.printer.v1_21_4.mixin;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.PrepareAction;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.ModifyVariable;
 
-@Mixin(PlayerMoveC2SPacket.class)
+@Mixin(ServerboundMovePlayerPacket.class)
 public class PlayerMoveC2SPacketMixin {
     @ModifyVariable(method = "<init>", at = @At("HEAD"), ordinal = 0, argsOnly = true)
     private static float modifyLookYaw(float yaw) {

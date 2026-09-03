@@ -2,28 +2,28 @@ package me.aleksilassila.litematica.printer.v1_21_4.actions;
 
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
 
 public class PostAction extends PrepareAction {
-    public PostAction(PrinterPlacementContext context, ClientPlayerEntity player) {
+    public PostAction(PrinterPlacementContext context, LocalPlayer player) {
         super(context);
-        this.pitch = player.getPitch();
-        this.yaw = player.getYaw();
+        this.pitch = player.getXRot();
+        this.yaw = player.getYRot();
     }
 
     @Override
-    public boolean send(MinecraftClient client, ClientPlayerEntity player) {
+    public boolean send(Minecraft client, LocalPlayer player) {
         if (context.canStealth) {
-            PlayerMoveC2SPacket.LookAndOnGround packet = new PlayerMoveC2SPacket.LookAndOnGround(this.yaw, this.pitch, player.isOnGround(), player.horizontalCollision);
+            ServerboundMovePlayerPacket.Rot packet = new ServerboundMovePlayerPacket.Rot(this.yaw, this.pitch, player.onGround(), player.horizontalCollision);
 
             if (PrinterConfig.ROTATE_PLAYER.getBooleanValue()) {
-                player.setYaw(this.yaw);
-                player.setPitch(this.pitch);
+                player.setYRot(this.yaw);
+                player.setXRot(this.pitch);
             }
 
-            player.networkHandler.sendPacket(packet);
+            player.connection.send(packet);
         }
         return true;
     }

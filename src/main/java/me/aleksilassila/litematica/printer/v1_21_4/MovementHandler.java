@@ -3,18 +3,18 @@ package me.aleksilassila.litematica.printer.v1_21_4;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.mixin.MixinAccessorClientPlayerEntity;
 import me.aleksilassila.litematica.printer.v1_21_4.mixin.MixinAccessorKeyBinding;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.screen.ingame.CraftingScreen;
-import net.minecraft.client.gui.screen.ingame.CreativeInventoryScreen;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import net.minecraft.network.packet.c2s.play.PlayerInputC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.inventory.CraftingScreen;
+import net.minecraft.client.gui.screens.inventory.CreativeModeInventoryScreen;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
+import net.minecraft.network.protocol.game.ServerboundPlayerInputPacket;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.world.phys.Vec3;
 
 public class MovementHandler {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
     private boolean disableNextTick = false;
 
     public void onGameTick() {
@@ -30,9 +30,9 @@ public class MovementHandler {
         }
 
         // Disable in inventories
-        if (mc.currentScreen != null) {
+        if (mc.screen != null) {
             if (PrinterConfig.MOVE_WHILE_IN_INVENTORY.getBooleanValue()) {
-                if (mc.currentScreen instanceof CraftingScreen || mc.currentScreen instanceof CreativeInventoryScreen) {
+                if (mc.screen instanceof CraftingScreen || mc.screen instanceof CreativeModeInventoryScreen) {
                     return;
                 }
             } else {
@@ -43,12 +43,12 @@ public class MovementHandler {
         // Get current inputs
         InputDirections currentInputDirection = InputDirections.getCurrentInput();
 
-        float cameraYaw = mc.gameRenderer.getCamera().getYaw() % 360;
+        float cameraYaw = mc.gameRenderer.getMainCamera().getYRot() % 360;
         if (currentInputDirection != InputDirections.NONE) {
             // lastPlayerInputDirection = currentInputDirection;
             // Calculate resulting control direction and apply them
             float inputYaw = currentInputDirection.getYaw();
-            float playerYaw = (mc.player.getYaw() + 360) % 360;
+            float playerYaw = (mc.player.getYRot() + 360) % 360;
 
             // Calculate the result yaw
             float playerRelativeYaw = inputYaw + playerYaw;
@@ -61,21 +61,21 @@ public class MovementHandler {
             }
 
             InputDirections.apply(resultDirection);
-        } else /*if (overwriteKeys.getValue())*/ {
+        } else /*if (overwriteKeys.get())*/ {
 //            Printer.logger.info("No input direction");
             InputDirections.apply(InputDirections.NONE);
         }
     }
 
-    public static void grimRotate(ClientPlayerEntity player, float yaw, float pitch) {
-        Vec3d playerPos = player.getPos();
-        mc.getNetworkHandler().sendPacket(new PlayerInputC2SPacket(player.input.playerInput));
-        mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.Full(playerPos.x, playerPos.y, playerPos.z, yaw, pitch, player.isOnGround(), player.horizontalCollision));
+    public static void grimRotate(LocalPlayer player, float yaw, float pitch) {
+        Vec3 playerPos = player.position();
+        mc.getConnection().send(new ServerboundPlayerInputPacket(player.input.keyPresses));
+        mc.getConnection().send(new ServerboundMovePlayerPacket.PosRot(playerPos.x, playerPos.y, playerPos.z, yaw, pitch, player.onGround(), player.horizontalCollision));
         ((MixinAccessorClientPlayerEntity) mc.player).setLastYaw(yaw);
         ((MixinAccessorClientPlayerEntity) mc.player).setLastPitch(pitch);
     }
 
-    public void onDisable(ClientPlayerEntity player) {
+    public void onDisable(LocalPlayer player) {
         disableNextTick = true;
     }
 
@@ -114,8 +114,8 @@ public class MovementHandler {
          *
          * @return a unit vector in the direction of the input direction
          */
-        public Vec3d getVec3d() {
-            return new Vec3d(Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
+        public Vec3 getVec3d() {
+            return new Vec3(Math.sin(Math.toRadians(yaw)), 0, Math.cos(Math.toRadians(yaw)));
         }
 
         public float getYaw() {
@@ -123,25 +123,25 @@ public class MovementHandler {
         }
 
         static InputDirections getCurrentInput() {
-            if (isKeyPressed(mc.options.forwardKey)) {
-                if (isKeyPressed(mc.options.leftKey)) {
+            if (isKeyPressed(mc.options.keyUp)) {
+                if (isKeyPressed(mc.options.keyLeft)) {
                     return FORWARD_LEFT;
-                } else if (isKeyPressed(mc.options.rightKey)) {
+                } else if (isKeyPressed(mc.options.keyRight)) {
                     return FORWARD_RIGHT;
                 } else {
                     return FORWARD;
                 }
-            } else if (isKeyPressed(mc.options.backKey)) {
-                if (isKeyPressed(mc.options.leftKey)) {
+            } else if (isKeyPressed(mc.options.keyDown)) {
+                if (isKeyPressed(mc.options.keyLeft)) {
                     return BACK_LEFT;
-                } else if (isKeyPressed(mc.options.rightKey)) {
+                } else if (isKeyPressed(mc.options.keyRight)) {
                     return BACK_RIGHT;
                 } else {
                     return BACK;
                 }
-            } else if (isKeyPressed(mc.options.leftKey)) {
+            } else if (isKeyPressed(mc.options.keyLeft)) {
                 return LEFT;
-            } else if (isKeyPressed(mc.options.rightKey)) {
+            } else if (isKeyPressed(mc.options.keyRight)) {
                 return RIGHT;
             } else {
                 return NONE;
@@ -150,21 +150,21 @@ public class MovementHandler {
 
         public boolean isPressed() {
             switch (this) {
-                case FORWARD -> isKeyPressed(mc.options.forwardKey);
+                case FORWARD -> isKeyPressed(mc.options.keyUp);
                 case FORWARD_LEFT -> {
-                    return isKeyPressed(mc.options.forwardKey) && isKeyPressed(mc.options.leftKey);
+                    return isKeyPressed(mc.options.keyUp) && isKeyPressed(mc.options.keyLeft);
                 }
                 case FORWARD_RIGHT -> {
-                    return isKeyPressed(mc.options.forwardKey) && isKeyPressed(mc.options.rightKey);
+                    return isKeyPressed(mc.options.keyUp) && isKeyPressed(mc.options.keyRight);
                 }
-                case LEFT -> isKeyPressed(mc.options.leftKey);
-                case RIGHT -> isKeyPressed(mc.options.rightKey);
-                case BACK -> isKeyPressed(mc.options.backKey);
+                case LEFT -> isKeyPressed(mc.options.keyLeft);
+                case RIGHT -> isKeyPressed(mc.options.keyRight);
+                case BACK -> isKeyPressed(mc.options.keyDown);
                 case BACK_LEFT -> {
-                    return isKeyPressed(mc.options.backKey) && isKeyPressed(mc.options.leftKey);
+                    return isKeyPressed(mc.options.keyDown) && isKeyPressed(mc.options.keyLeft);
                 }
                 case BACK_RIGHT -> {
-                    return isKeyPressed(mc.options.backKey) && isKeyPressed(mc.options.rightKey);
+                    return isKeyPressed(mc.options.keyDown) && isKeyPressed(mc.options.keyRight);
                 }
                 default -> {
                     return false;
@@ -174,30 +174,30 @@ public class MovementHandler {
         }
 
         static void apply(InputDirections direction) {
-            mc.options.forwardKey.setPressed(false);
-            mc.options.leftKey.setPressed(false);
-            mc.options.rightKey.setPressed(false);
-            mc.options.backKey.setPressed(false);
+            mc.options.keyUp.setDown(false);
+            mc.options.keyLeft.setDown(false);
+            mc.options.keyRight.setDown(false);
+            mc.options.keyDown.setDown(false);
             switch (direction) {
-                case FORWARD -> mc.options.forwardKey.setPressed(true);
+                case FORWARD -> mc.options.keyUp.setDown(true);
                 case FORWARD_LEFT -> {
-                    mc.options.leftKey.setPressed(true);
-                    mc.options.forwardKey.setPressed(true);
+                    mc.options.keyLeft.setDown(true);
+                    mc.options.keyUp.setDown(true);
                 }
                 case FORWARD_RIGHT -> {
-                    mc.options.rightKey.setPressed(true);
-                    mc.options.forwardKey.setPressed(true);
+                    mc.options.keyRight.setDown(true);
+                    mc.options.keyUp.setDown(true);
                 }
-                case LEFT -> mc.options.leftKey.setPressed(true);
-                case RIGHT -> mc.options.rightKey.setPressed(true);
-                case BACK -> mc.options.backKey.setPressed(true);
+                case LEFT -> mc.options.keyLeft.setDown(true);
+                case RIGHT -> mc.options.keyRight.setDown(true);
+                case BACK -> mc.options.keyDown.setDown(true);
                 case BACK_LEFT -> {
-                    mc.options.backKey.setPressed(true);
-                    mc.options.leftKey.setPressed(true);
+                    mc.options.keyDown.setDown(true);
+                    mc.options.keyLeft.setDown(true);
                 }
                 case BACK_RIGHT -> {
-                    mc.options.backKey.setPressed(true);
-                    mc.options.rightKey.setPressed(true);
+                    mc.options.keyDown.setDown(true);
+                    mc.options.keyRight.setDown(true);
                 }
                 case NONE -> {
 
@@ -206,7 +206,7 @@ public class MovementHandler {
         }
     }
 
-    static boolean isKeyPressed(KeyBinding keyBinding) {
-        return InputUtil.isKeyPressed(MinecraftClient.getInstance().getWindow().getHandle(), ((MixinAccessorKeyBinding) keyBinding).getBoundKey().getCode());
+    static boolean isKeyPressed(KeyMapping keyBinding) {
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), ((MixinAccessorKeyBinding) keyBinding).getBoundKey().getValue());
     }
 }

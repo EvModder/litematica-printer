@@ -1,10 +1,10 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.Block;
-import net.minecraft.block.FlowerPotBlock;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.FlowerPotBlock;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -18,14 +18,14 @@ public class FlowerPotFillGuide extends InteractionGuide {
 
         Block targetBlock = state.targetState.getBlock();
         if (targetBlock instanceof FlowerPotBlock) {
-            this.content = ((FlowerPotBlock) targetBlock).getContent();
+            this.content = ((FlowerPotBlock) targetBlock).getPotted();
         } else {
             this.content = null;
         }
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (content == null) return false;
         if (!(currentState.getBlock() instanceof FlowerPotBlock)) return false;
 

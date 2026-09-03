@@ -2,21 +2,24 @@ package me.aleksilassila.litematica.printer.v1_21_4.mixin;
 
 import me.aleksilassila.litematica.printer.v1_21_4.FreeLook;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
-import net.minecraft.client.render.Camera;
+import net.minecraft.client.Camera;
 import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.Shadow;
 import org.spongepowered.asm.mixin.injection.At;
-import org.spongepowered.asm.mixin.injection.ModifyArgs;
-import org.spongepowered.asm.mixin.injection.invoke.arg.Args;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 @Mixin(Camera.class)
-public class MixinCamera {
-    @ModifyArgs(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/render/Camera;setRotation(FF)V"))
-    private void onUpdateSetRotationArgs(Args args) {
+public abstract class MixinCamera {
+    @Shadow
+    protected abstract void setRotation(float yaw, float pitch);
+
+    @Inject(method = "update", at = @At(value = "INVOKE", target = "Lnet/minecraft/client/Camera;alignWithEntity(F)V", shift = At.Shift.AFTER))
+    private void onUpdateAfterAlignWithEntity(CallbackInfo ci) {
         FreeLook freeLook = LitematicaMixinMod.freeLook;
 
         if (freeLook.isEnabled()) {
-            args.set(0, freeLook.getCameraYaw());
-            args.set(1, freeLook.getCameraPitch());
+            setRotation(freeLook.getCameraYaw(), freeLook.getCameraPitch());
         }
     }
 }

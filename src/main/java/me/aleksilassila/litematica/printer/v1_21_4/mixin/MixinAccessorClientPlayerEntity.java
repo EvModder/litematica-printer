@@ -1,27 +1,27 @@
 package me.aleksilassila.litematica.printer.v1_21_4.mixin;
 
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(ClientPlayerEntity.class)
+@Mixin(LocalPlayer.class)
 public interface MixinAccessorClientPlayerEntity {
-    @Accessor("ticksLeftToDoubleTapSprint")
+    @Accessor("sprintTriggerTime")
     void setTicksLeftToDoubleTapSprint(int ticksLeftToDoubleTapSprint);
 
-    @Accessor("lastSneaking")
+    @Accessor("crouching")
     boolean getLastSneaking();
 
-    @Accessor("lastSneaking")
+    @Accessor("crouching")
     void setLastSneaking(boolean lastSneaking);
 
-    @Accessor("lastPitch")
+    @Accessor("xRotLast")
     float getLastPitch();
-    @Accessor("lastPitch")
+    @Accessor("xRotLast")
     void setLastPitch(float lastPitch);
 
-    @Accessor("lastYaw")
+    @Accessor("yRotLast")
     float getLastYaw();
-    @Accessor("lastYaw")
+    @Accessor("yRotLast")
     void setLastYaw(float lastYaw);
 }

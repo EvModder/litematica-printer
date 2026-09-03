@@ -5,16 +5,16 @@ import me.aleksilassila.litematica.printer.v1_21_4.MovementHandler;
 import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.network.packet.c2s.play.PlayerMoveC2SPacket;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.network.protocol.game.ServerboundMovePlayerPacket;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 
 import java.util.Optional;
 
 public class PrepareLook extends Action {
-    private static final MinecraftClient mc = MinecraftClient.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
     public final PrinterPlacementContext context;
     public Optional<Float> yaw = Optional.empty();
     public Optional<Float> pitch = Optional.empty();
@@ -23,8 +23,8 @@ public class PrepareLook extends Action {
         this.context = context;
     }
 
-    static float[] getNeededRotations(ClientPlayerEntity player, Vec3d vec) {
-        Vec3d eyesPos = player.getEyePos();
+    static float[] getNeededRotations(LocalPlayer player, Vec3 vec) {
+        Vec3 eyesPos = player.getEyePosition();
 
         double diffX = vec.x - eyesPos.x;
         double diffY = vec.y - eyesPos.y;
@@ -58,7 +58,7 @@ public class PrepareLook extends Action {
     }
 
     @Override
-    public boolean send(MinecraftClient client, ClientPlayerEntity player) {
+    public boolean send(Minecraft client, LocalPlayer player) {
         if (context.isAirPlace) {
             if (context.lookDirection != null) {
                 float[] targetRot = getRotation(context.lookDirection);
@@ -73,8 +73,8 @@ public class PrepareLook extends Action {
                 } else if (PrinterConfig.ROTATE_PLAYER.getBooleanValue()) {
                     LitematicaMixinMod.printer.rotate(yaw.get(), pitch.get());
                 } else {
-                    mc.getNetworkHandler().sendPacket(new PlayerMoveC2SPacket.LookAndOnGround(
-                            yaw.get(), pitch.get(), player.isOnGround(), player.horizontalCollision));
+                    mc.getConnection().send(new ServerboundMovePlayerPacket.Rot(
+                            yaw.get(), pitch.get(), player.onGround(), player.horizontalCollision));
                 }
                 return true;
             }
@@ -92,8 +92,8 @@ public class PrepareLook extends Action {
                 MovementHandler.grimRotate(player, targetRot[0], targetRot[1]);
             }
         } else {
-            float yaw = player.getYaw();
-            float pitch = player.getPitch();
+            float yaw = player.getYRot();
+            float pitch = player.getXRot();
 
             if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue())
                 System.out.println("Sending yaw for modified yaw: " + yaw + ", pitch: " + pitch);

@@ -2,18 +2,20 @@ package me.aleksilassila.litematica.printer.v1_21_4.implementation;
 
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FireBlock;
-import net.minecraft.block.FluidBlock;
-import net.minecraft.entity.player.PlayerEntity;
-import net.minecraft.item.ItemPlacementContext;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.FireBlock;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.context.BlockPlaceContext;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import org.jetbrains.annotations.Nullable;
 
-public class PrinterPlacementContext extends ItemPlacementContext {
+public class PrinterPlacementContext extends BlockPlaceContext {
     public final @Nullable Direction lookDirection;
     public final boolean shouldSneak;
     public final BlockHitResult hitResult;
@@ -22,12 +24,12 @@ public class PrinterPlacementContext extends ItemPlacementContext {
     public boolean isRaytrace = false;
     public boolean isAirPlace = false;
 
-    public PrinterPlacementContext(PlayerEntity player, BlockHitResult hitResult, ItemStack requiredItem, int requiredItemSlot) {
+    public PrinterPlacementContext(Player player, BlockHitResult hitResult, ItemStack requiredItem, int requiredItemSlot) {
         this(player, hitResult, requiredItem, requiredItemSlot, null, false);
     }
 
-    public PrinterPlacementContext(PlayerEntity player, BlockHitResult hitResult, ItemStack requiredItem, int requiredItemSlot, @Nullable Direction lookDirection, boolean requiresSneaking) {
-        super(player, Hand.MAIN_HAND, requiredItem, hitResult);
+    public PrinterPlacementContext(Player player, BlockHitResult hitResult, ItemStack requiredItem, int requiredItemSlot, @Nullable Direction lookDirection, boolean requiresSneaking) {
+        super(player, InteractionHand.MAIN_HAND, requiredItem, hitResult);
 
         this.lookDirection = lookDirection;
         this.shouldSneak = requiresSneaking;
@@ -36,22 +38,34 @@ public class PrinterPlacementContext extends ItemPlacementContext {
     }
 
     @Override
-    public Direction getPlayerLookDirection() {
-        return lookDirection == null ? super.getPlayerLookDirection() : lookDirection;
+    public Direction getNearestLookingDirection() {
+        return lookDirection == null ? super.getNearestLookingDirection() : lookDirection;
     }
 
     @Override
-    public Direction getVerticalPlayerLookDirection() {
-        if (lookDirection != null && lookDirection.getOpposite() == super.getVerticalPlayerLookDirection())
+    public Direction getNearestLookingVerticalDirection() {
+        if (lookDirection != null && lookDirection.getOpposite() == super.getNearestLookingVerticalDirection())
             return lookDirection;
-        return super.getVerticalPlayerLookDirection();
+        return super.getNearestLookingVerticalDirection();
     }
 
     @Override
-    public Direction getHorizontalPlayerFacing() {
-        if (lookDirection == null || !lookDirection.getAxis().isHorizontal()) return super.getHorizontalPlayerFacing();
+    public Direction getHorizontalDirection() {
+        if (lookDirection == null || !lookDirection.getAxis().isHorizontal()) return super.getHorizontalDirection();
 
         return lookDirection;
+    }
+
+    public BlockPos getBlockPos() {
+        return hitResult.getBlockPos();
+    }
+
+    public Direction getDirection() {
+        return hitResult.getDirection();
+    }
+
+    public Vec3 getHitPos() {
+        return hitResult.getLocation();
     }
 
     @Override
@@ -62,16 +76,16 @@ public class PrinterPlacementContext extends ItemPlacementContext {
         if (!super.canPlace()) {
             return false;
         }
-        BlockState currentState = this.getWorld().getBlockState(hitResult.getBlockPos());
-        if (this.getPlayer().getEyePos().distanceTo(hitResult.getBlockPos().toCenterPos()) > PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue()) {
+        BlockState currentState = this.getLevel().getBlockState(hitResult.getBlockPos());
+        if (this.getPlayer().getEyePosition().distanceTo(Vec3.atCenterOf(hitResult.getBlockPos())) > PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue()) {
             return false;
         }
         // Wrong state and not replaceable
-        if (!currentState.isReplaceable() && !(currentState.getBlock() instanceof FireBlock)) {
+        if (!currentState.canBeReplaced() && !(currentState.getBlock() instanceof FireBlock)) {
             return false;
         } else {
             // Replaceable block. Check fluid source block replacement config
-            if (currentState.getBlock() instanceof FluidBlock && !LitematicaMixinMod.REPLACE_FLUIDS_SOURCE_BLOCKS.getBooleanValue()) {
+            if (currentState.getBlock() instanceof LiquidBlock && !LitematicaMixinMod.REPLACE_FLUIDS_SOURCE_BLOCKS.getBooleanValue()) {
                 // Only allow replacing fluid source blocks if the config is enabled
                 return false;
             }
@@ -85,7 +99,7 @@ public class PrinterPlacementContext extends ItemPlacementContext {
                 "lookDirection=" + lookDirection +
                 ", requiresSneaking=" + shouldSneak +
                 ", blockPos=" + hitResult.getBlockPos() +
-                ", side=" + hitResult.getSide() +
+                ", side=" + hitResult.getDirection() +
 //                ", hitVec=" + hitResult +
                 '}';
     }

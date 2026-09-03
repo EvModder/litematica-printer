@@ -1,10 +1,10 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.enums.RailShape;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.RailShape;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.core.Direction;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -40,7 +40,7 @@ public class RailGuesserGuide extends GeneralPlacementGuide {
 
         if (getRailShape(resultState).isPresent()) {
             if (Arrays.stream(STRAIGHT_RAIL_SHAPES).anyMatch(shape -> shape == getRailShape(resultState).orElse(null))) {
-                return super.statesEqualIgnoreProperties(resultState, targetState, Properties.RAIL_SHAPE, Properties.STRAIGHT_RAIL_SHAPE, Properties.POWERED);
+                return super.statesEqualIgnoreProperties(resultState, targetState, BlockStateProperties.RAIL_SHAPE, BlockStateProperties.RAIL_SHAPE_STRAIGHT, BlockStateProperties.POWERED);
             }
         }
 
@@ -110,7 +110,7 @@ public class RailGuesserGuide extends GeneralPlacementGuide {
     private List<Direction> getRailDirections(RailShape railShape) {
         String name = railShape.getName();
 
-        if (railShape.isAscending()) {
+        if (railShape.isSlope()) {
             Direction d = Direction.valueOf(name.replace("ascending_", "").toUpperCase());
             return Arrays.asList(d, d.getOpposite());
         } else {
@@ -121,8 +121,8 @@ public class RailGuesserGuide extends GeneralPlacementGuide {
     }
 
     Optional<RailShape> getRailShape(BlockState state) {
-        Optional<RailShape> shape = getProperty(state, Properties.RAIL_SHAPE);
-        if (shape.isEmpty()) return getProperty(state, Properties.STRAIGHT_RAIL_SHAPE);
+        Optional<RailShape> shape = getProperty(state, BlockStateProperties.RAIL_SHAPE);
+        if (shape.isEmpty()) return getProperty(state, BlockStateProperties.RAIL_SHAPE_STRAIGHT);
         return shape;
     }
 }

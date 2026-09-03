@@ -7,18 +7,19 @@ import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.block.*;
-import net.minecraft.block.enums.ChestType;
-import net.minecraft.block.enums.SlabType;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.hit.HitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
-import net.minecraft.world.RaycastContext;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.ChestType;
+import net.minecraft.world.level.block.state.properties.SlabType;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
+import net.minecraft.world.level.ClipContext;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -31,19 +32,19 @@ import java.util.Optional;
  * for player state depending on the block being placed.
  */
 public class GeneralPlacementGuide extends PlacementGuide {
-    protected static Vec3d[] extendedHitVecs = new Vec3d[]{
-            new Vec3d(-0.25, -0.25, -0.25),
-            new Vec3d(+0.25, -0.25, -0.25),
-            new Vec3d(-0.25, +0.25, -0.25),
-            new Vec3d(-0.25, -0.25, +0.25),
-            new Vec3d(+0.25, +0.25, -0.25),
-            new Vec3d(-0.25, +0.25, +0.25),
-            new Vec3d(+0.25, -0.25, +0.25),
-            new Vec3d(+0.25, +0.25, +0.25),
-            new Vec3d(-0.25, -0.49, -0.25), // 1/4 Just above the lower edge of a block. For carpets for instance as they are very thin
-            new Vec3d(+0.25, -0.49, -0.25), // 2/4
-            new Vec3d(-0.25, -0.49, +0.25), // 3/4
-            new Vec3d(+0.25, -0.49, +0.25) // 4/4
+    protected static Vec3[] extendedHitVecs = new Vec3[]{
+            new Vec3(-0.25, -0.25, -0.25),
+            new Vec3(+0.25, -0.25, -0.25),
+            new Vec3(-0.25, +0.25, -0.25),
+            new Vec3(-0.25, -0.25, +0.25),
+            new Vec3(+0.25, +0.25, -0.25),
+            new Vec3(-0.25, +0.25, +0.25),
+            new Vec3(+0.25, -0.25, +0.25),
+            new Vec3(+0.25, +0.25, +0.25),
+            new Vec3(-0.25, -0.49, -0.25), // 1/4 Just above the lower edge of a block. For carpets for instance as they are very thin
+            new Vec3(+0.25, -0.49, -0.25), // 2/4
+            new Vec3(-0.25, -0.49, +0.25), // 3/4
+            new Vec3(+0.25, -0.49, +0.25) // 4/4
     };
     private PrinterPlacementContext contextCache = null;
 
@@ -67,8 +68,8 @@ public class GeneralPlacementGuide extends PlacementGuide {
         return false;
     }
 
-    protected Vec3d getHitModifier(Direction validSide) {
-        return new Vec3d(0, 0, 0);
+    protected Vec3 getHitModifier(Direction validSide) {
+        return new Vec3(0, 0, 0);
     }
 
     private Optional<Direction> getValidSide(SchematicBlockState state) {
@@ -93,7 +94,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
                 }
 
                 if (canBeClicked(neighborState.world, neighborState.blockPos) && // Handle unclickable grass for example
-                        !neighborState.currentState.isReplaceable())
+                        !neighborState.currentState.canBeReplaced())
                     validSides.add(side);
             }
         }
@@ -107,7 +108,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
         return validSides.isEmpty() ? Optional.empty() : Optional.of(validSides.get(0));
     }
 
-    protected Vec3d[] getPossibleHitVecs() {
+    protected Vec3[] getPossibleHitVecs() {
         return extendedHitVecs;
     }
 
@@ -124,7 +125,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
             }
 
             if (canBeClicked(neighborState.world, neighborState.blockPos) && // Handle unclickable grass for example
-                    !neighborState.currentState.isReplaceable())
+                    !neighborState.currentState.canBeReplaced())
                 validSides.add(side);
         }
 
@@ -140,13 +141,13 @@ public class GeneralPlacementGuide extends PlacementGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!super.canExecute(player)) return false;
         if (!PrinterConfig.STRICT_BLOCK_FACE_CHECK.getBooleanValue()) {
             return true;
         }
         for (Direction side : getPossibleSides()) {
-            if (canSeeBlockFace(player, new BlockHitResult(Vec3d.ofCenter(state.blockPos), side.getOpposite(), state.blockPos.offset(side), false))) {
+            if (canSeeBlockFace(player, new BlockHitResult(Vec3.atCenterOf(state.blockPos), side.getOpposite(), state.blockPos.relative(side), false))) {
                 return true;
             }
         }
@@ -154,7 +155,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
     }
 
     @Override
-    public @Nullable PrinterPlacementContext getPlacementContext(ClientPlayerEntity player) {
+    public @Nullable PrinterPlacementContext getPlacementContext(LocalPlayer player) {
         if (PrinterConfig.PRINTER_AIRPLACE.getBooleanValue()) {
             return getAirplaceContext(player);
         } else {
@@ -163,7 +164,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
     }
 
     @Nullable
-    public PrinterPlacementContext getContextByStrictLook(ClientPlayerEntity player) {
+    public PrinterPlacementContext getContextByStrictLook(LocalPlayer player) {
         if (contextCache != null && !LitematicaMixinMod.DEBUG && !PrinterConfig.NO_PLACEMENT_CACHE.getBooleanValue() && contextCache.isRaytrace == PrinterConfig.RAYCAST.getBooleanValue())
             return contextCache;
 
@@ -172,18 +173,18 @@ public class GeneralPlacementGuide extends PlacementGuide {
 
         if (slot == -1) return null;
 
-        Vec3d[] hitVecsToTryArray = getPossibleHitVecs();
+        Vec3[] hitVecsToTryArray = getPossibleHitVecs();
 
-        Vec3d playerEyePos = player.getEyePos();
+        Vec3 playerEyePos = player.getEyePosition();
         // Direction relativeRotation = Direction.getEntityFacingOrder(player)[0];
 
         // for (Direction lookDirection : directionsToTry) {
         for (Direction side : getPossibleSides()) {
-            BlockPos neighborPos = state.blockPos.offset(side);
+            BlockPos neighborPos = state.blockPos.relative(side);
 
             // Check if the block face is visible. Prevents the printer from trying to place blocks on the backside of other blocks
             if (PrinterConfig.STRICT_BLOCK_FACE_CHECK.getBooleanValue()) {
-                if (!canSeeBlockFace(player, new BlockHitResult(Vec3d.ofCenter(state.blockPos), side.getOpposite(), neighborPos, false))) {
+                if (!canSeeBlockFace(player, new BlockHitResult(Vec3.atCenterOf(state.blockPos), side.getOpposite(), neighborPos, false))) {
                     continue;
                 }
             }
@@ -192,44 +193,44 @@ public class GeneralPlacementGuide extends PlacementGuide {
             boolean requiresShift = getRequiresExplicitShift() || isInteractive(neighborState.getBlock());
 
             if (!canBeClicked(state.world, neighborPos) || // Handle unclickable grass for example
-                    neighborState.isReplaceable())
+                    neighborState.canBeReplaced())
                 continue;
 
-            Vec3d hitVec = Vec3d.ofCenter(state.blockPos)
-                    .add(Vec3d.of(side.getVector()).multiply(0.5)); // Center of the block side face we are placing on
+            Vec3 hitVec = Vec3.atCenterOf(state.blockPos)
+                    .add(new Vec3(side.step()).scale(0.5)); // Center of the block side face we are placing on
 
             // Now we bring on the big guns, brute force the hit vector until we find a solution that directly hits the neighbor block without obstruction
-            for (Vec3d hitVecToTry : hitVecsToTryArray) {
-                Vec3d multiplier = Vec3d.of(side.getVector());
-                multiplier = new Vec3d(
+            for (Vec3 hitVecToTry : hitVecsToTryArray) {
+                Vec3 multiplier = new Vec3(side.step());
+                multiplier = new Vec3(
                         multiplier.x == 0 ? 1 : 0,
                         multiplier.y == 0 ? 1 : 0,
                         multiplier.z == 0 ? 1 : 0); // Offset from the Center of the block side face we are placing on by pre calculated values. This samples different points on that face.
 
-                Vec3d blockHit = hitVec.add(hitVecToTry.multiply(multiplier));
-                Vec3d lookDirection = blockHit.subtract(playerEyePos).normalize();
-                Direction relativeDirection = Direction.getFacing(lookDirection.x, lookDirection.y, lookDirection.z);
+                Vec3 blockHit = hitVec.add(hitVecToTry.multiply(multiplier));
+                Vec3 lookDirection = blockHit.subtract(playerEyePos).normalize();
+                Direction relativeDirection = Direction.getApproximateNearest(lookDirection.x, lookDirection.y, lookDirection.z);
 
                 if (playerEyePos.distanceTo(blockHit) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) // Check if the hit vector is in range
                     continue;
 
-                if (PrinterConfig.RAYCAST.getBooleanValue() && mc.world != null && mc.player != null) {
-                    Vec3d lookVec = blockHit.subtract(playerEyePos).normalize(); // Look vector from the player's eye to the block hit vector
-                    Vec3d raycastEnd = playerEyePos.add(lookVec.multiply(5)); // 5 block max distance
-                    RaycastContext raycastContext = new RaycastContext(playerEyePos, raycastEnd, RaycastContext.ShapeType.OUTLINE, RaycastContext.FluidHandling.NONE, player);
-                    BlockHitResult result = mc.world.raycast(raycastContext);
+                if (PrinterConfig.RAYCAST.getBooleanValue() && mc.level != null && mc.player != null) {
+                    Vec3 lookVec = blockHit.subtract(playerEyePos).normalize(); // Look vector from the player's eye to the block hit vector
+                    Vec3 raycastEnd = playerEyePos.add(lookVec.scale(5)); // 5 block max distance
+                    ClipContext raycastContext = new ClipContext(playerEyePos, raycastEnd, ClipContext.Block.OUTLINE, ClipContext.Fluid.NONE, player);
+                    BlockHitResult result = mc.level.clip(raycastContext);
                     if (result.getType() != HitResult.Type.BLOCK) { // If we didn't hit a block, skip
                         continue;
                     }
 
                     if (result.getBlockPos().equals(neighborPos)) {
                         if (PrinterConfig.RAYCAST_STRICT_BLOCK_HIT.getBooleanValue()) { // Check if the right side was hit
-                            Direction hitSide = result.getSide();
+                            Direction hitSide = result.getDirection();
                             if (hitSide.getOpposite() != side) {
                                 continue;
                             }
                         }
-                        if (result.getPos().distanceTo(playerEyePos) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) { // Check if the hit result is in range
+                        if (result.getLocation().distanceTo(playerEyePos) > LitematicaMixinMod.PRINTING_RANGE.getDoubleValue()) { // Check if the hit result is in range
                             continue;
                         }
                         BlockHitResult hitResult = new BlockHitResult(blockHit, side.getOpposite(), neighborPos, false);
@@ -238,7 +239,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
                         rayTraceContext.isRaytrace = true;
                         BlockState resultState = getRequiredItemAsBlock(player)
                                 .orElse(targetState.getBlock())
-                                .getPlacementState(rayTraceContext);
+                                .getStateForPlacement(rayTraceContext);
 
                         if (resultState != null && correctObserverPlacement(targetState, resultState) && (statesEqual(resultState, targetState) || correctChestPlacement(targetState, resultState))) {
                             contextCache = rayTraceContext;
@@ -252,7 +253,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
                     context.canStealth = true;
                     BlockState result = getRequiredItemAsBlock(player)
                             .orElse(targetState.getBlock())
-                            .getPlacementState(context); // FIXME torch shift clicks another torch and getPlacementState is the clicked block, which is true
+                            .getStateForPlacement(context); // FIXME torch shift clicks another torch and getPlacementState is the clicked block, which is true
 
                     if (result != null && correctObserverPlacement(targetState, result) && (statesEqual(result, targetState) || correctChestPlacement(targetState, result))) {
                         contextCache = context;
@@ -284,7 +285,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
      * @return the PrinterPlacementContext or null if no valid context was found
      */
     @Nullable
-    public PrinterPlacementContext getAirplaceContext(ClientPlayerEntity player) {
+    public PrinterPlacementContext getAirplaceContext(LocalPlayer player) {
         if (contextCache != null && !LitematicaMixinMod.DEBUG) return contextCache;
 
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);
@@ -301,9 +302,9 @@ public class GeneralPlacementGuide extends PlacementGuide {
 
         // First quick attempt: original center (UP side) (fast path)
         {
-            BlockHitResult hr = new BlockHitResult(Vec3d.ofCenter(state.blockPos), Direction.UP, state.blockPos, true);
+            BlockHitResult hr = new BlockHitResult(Vec3.atCenterOf(state.blockPos), Direction.UP, state.blockPos, true);
             PrinterPlacementContext quick = new PrinterPlacementContext(player, hr, requiredItem, slot, null, false);
-            BlockState res = getRequiredItemAsBlock(player).orElse(targetState.getBlock()).getPlacementState(quick);
+            BlockState res = getRequiredItemAsBlock(player).orElse(targetState.getBlock()).getStateForPlacement(quick);
             if (res != null && correctObserverPlacement(targetState, res) && statesEqual(res, targetState)) {
                 contextCache = quick;
                 quick.isAirPlace = true;
@@ -322,24 +323,24 @@ public class GeneralPlacementGuide extends PlacementGuide {
                     for (double x : xzSamples) {
                         for (double z : xzSamples) {
                             // Start with raw interior sample
-                            Vec3d sample = new Vec3d(x, y, z);
-                            Vec3d hitVec = Vec3d.of(state.blockPos).add(sample);
+                            Vec3 sample = new Vec3(x, y, z);
+                            Vec3 hitVec = Vec3.atLowerCornerOf(state.blockPos).add(sample);
 
                             // Ensure the hitVec lies on the correct face for the side: project coordinate component to face plane center
                             hitVec = switch (side) {
-                                case UP -> new Vec3d(hitVec.x, state.blockPos.getY() + 1 - 1e-4, hitVec.z);
-                                case DOWN -> new Vec3d(hitVec.x, state.blockPos.getY() + 1e-4, hitVec.z);
-                                case NORTH -> new Vec3d(hitVec.x, hitVec.y, state.blockPos.getZ() + 1e-4);
-                                case SOUTH -> new Vec3d(hitVec.x, hitVec.y, state.blockPos.getZ() + 1 - 1e-4);
-                                case WEST -> new Vec3d(state.blockPos.getX() + 1e-4, hitVec.y, hitVec.z);
-                                case EAST -> new Vec3d(state.blockPos.getX() + 1 - 1e-4, hitVec.y, hitVec.z);
+                                case UP -> new Vec3(hitVec.x, state.blockPos.getY() + 1 - 1e-4, hitVec.z);
+                                case DOWN -> new Vec3(hitVec.x, state.blockPos.getY() + 1e-4, hitVec.z);
+                                case NORTH -> new Vec3(hitVec.x, hitVec.y, state.blockPos.getZ() + 1e-4);
+                                case SOUTH -> new Vec3(hitVec.x, hitVec.y, state.blockPos.getZ() + 1 - 1e-4);
+                                case WEST -> new Vec3(state.blockPos.getX() + 1e-4, hitVec.y, hitVec.z);
+                                case EAST -> new Vec3(state.blockPos.getX() + 1 - 1e-4, hitVec.y, hitVec.z);
                             };
 
                             BlockHitResult hitResult = new BlockHitResult(hitVec, side.getOpposite(), state.blockPos, true);
                             PrinterPlacementContext context = new PrinterPlacementContext(player, hitResult, requiredItem, slot, lookDirection, false);
                             BlockState result = getRequiredItemAsBlock(player)
                                     .orElse(targetState.getBlock())
-                                    .getPlacementState(context);
+                                    .getStateForPlacement(context);
                             if (result != null && correctObserverPlacement(targetState, result) && statesEqual(result, targetState)) {
                                 contextCache = context;
                                 context.isAirPlace = true;
@@ -357,7 +358,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
 //        if (Printer.inactivityCounter < PrinterConfig.PRINTER_MIN_INACTIVE_TIME_AIR_PLACE.getIntegerValue()) {
 //            return null;
 //        }
-//        if (PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue() < 0 || player.getEyePos().distanceTo(Vec3d.ofCenter(state.blockPos)) > PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue()) {
+//        if (PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue() < 0 || player.getEyePosition().distanceTo(Vec3.atCenterOf(state.blockPos)) > PrinterConfig.PRINTER_AIRPLACE_RANGE.getDoubleValue()) {
 //            return null;
 //        }
 
@@ -365,9 +366,9 @@ public class GeneralPlacementGuide extends PlacementGuide {
     }
 
     private boolean correctChestPlacement(BlockState targetState, BlockState result) {
-        if (targetState.contains(ChestBlock.CHEST_TYPE) && result.contains(ChestBlock.CHEST_TYPE) && result.get(ChestBlock.FACING) == targetState.get(ChestBlock.FACING)) {
-            ChestType targetChestType = targetState.get(ChestBlock.CHEST_TYPE);
-            ChestType resultChestType = result.get(ChestBlock.CHEST_TYPE);
+        if (targetState.hasProperty(ChestBlock.TYPE) && result.hasProperty(ChestBlock.TYPE) && result.getValue(ChestBlock.FACING) == targetState.getValue(ChestBlock.FACING)) {
+            ChestType targetChestType = targetState.getValue(ChestBlock.TYPE);
+            ChestType resultChestType = result.getValue(ChestBlock.TYPE);
 
             return targetChestType != ChestType.SINGLE && resultChestType == ChestType.SINGLE;
         }
@@ -387,45 +388,45 @@ public class GeneralPlacementGuide extends PlacementGuide {
         if (result.getBlock() != Blocks.OBSERVER) return true;
         if (targetState.getBlock() != Blocks.OBSERVER) return true;
 
-        Direction facing = result.get(Properties.FACING);
+        Direction facing = result.getValue(BlockStateProperties.FACING);
         if (facing == null) return false;
 
         WorldSchematic schematicWorld = SchematicWorldHandler.getSchematicWorld();
         if (schematicWorld == null) return false;
-        if (mc.world == null) return false;
+        if (mc.level == null) return false;
 
-        if (schematicWorld.getBlockState(state.blockPos.offset(facing)).isAir()) {
+        if (schematicWorld.getBlockState(state.blockPos.relative(facing)).isAir()) {
             return true;
         } else {
-            return !mc.world.getBlockState(state.blockPos.offset(facing)).isAir();
+            return !mc.level.getBlockState(state.blockPos.relative(facing)).isAir();
         }
     }
 
-    protected boolean canSeeBlockFace(ClientPlayerEntity player, BlockHitResult hitResult) {
+    protected boolean canSeeBlockFace(LocalPlayer player, BlockHitResult hitResult) {
         // Draw a line between the player pos and the block pos and check if the block side is visible
         // BlockPos targetPos = state.blockPos;
 
-        Direction side = hitResult.getSide();
+        Direction side = hitResult.getDirection();
         BlockPos blockPos = hitResult.getBlockPos();
-        Vec3d playerEyePos = player.getEyePos();
+        Vec3 playerEyePos = player.getEyePosition();
         switch (side) {
             case UP:
-                if (blockPos.getY() + 1 > playerEyePos.getY()) return false;
+                if (blockPos.getY() + 1 > playerEyePos.y) return false;
                 break;
             case DOWN:
-                if (blockPos.getY() < playerEyePos.getY()) return false;
+                if (blockPos.getY() < playerEyePos.y) return false;
                 break;
             case NORTH:
-                if (blockPos.getZ() < playerEyePos.getZ()) return false;
+                if (blockPos.getZ() < playerEyePos.z) return false;
                 break;
             case SOUTH:
-                if (blockPos.getZ() + 1 > playerEyePos.getZ()) return false;
+                if (blockPos.getZ() + 1 > playerEyePos.z) return false;
                 break;
             case EAST:
-                if (blockPos.getX() + 1 > playerEyePos.getX()) return false;
+                if (blockPos.getX() + 1 > playerEyePos.x) return false;
                 break;
             case WEST:
-                if (blockPos.getX() < playerEyePos.getX()) return false;
+                if (blockPos.getX() < playerEyePos.x) return false;
                 break;
         }
         return true;

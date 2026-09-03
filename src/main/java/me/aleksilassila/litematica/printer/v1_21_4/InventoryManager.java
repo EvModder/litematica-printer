@@ -6,20 +6,20 @@ import fi.dy.masa.litematica.util.InventoryUtils;
 import fi.dy.masa.litematica.world.WorldSchematic;
 import fi.dy.masa.malilib.config.options.ConfigString;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
-import net.minecraft.block.BlockState;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.Item;
-import net.minecraft.item.ItemStack;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.UpdateSelectedSlotC2SPacket;
-import net.minecraft.screen.PlayerScreenHandler;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.Hand;
-import net.minecraft.util.collection.DefaultedList;
-import net.minecraft.util.math.BlockPos;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.Item;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
+import net.minecraft.world.inventory.InventoryMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.core.NonNullList;
+import net.minecraft.core.BlockPos;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayDeque;
@@ -35,7 +35,7 @@ public class InventoryManager {
      */
     private final ArrayList<SlotInfo> hotbarSlots = new ArrayList<>(9);
 
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     private final Deque<Integer> rollingSlots = new ArrayDeque<>();
     private final Deque<Integer> lastUsedSlots = new ArrayDeque<>();
     private static InventoryManager instance;
@@ -58,7 +58,7 @@ public class InventoryManager {
             try {
                 int slotNum = Integer.parseInt(str) - 1;
 
-                if (PlayerInventory.isValidHotbarIndex(slotNum) &&
+                if (Inventory.isHotbarSlot(slotNum) &&
                         !USABLE_SLOTS.contains(slotNum)) {
                     USABLE_SLOTS.add(slotNum);
                 }
@@ -79,7 +79,7 @@ public class InventoryManager {
     }
 
     public boolean tick() {
-        if (mc.player == null || mc.interactionManager == null) {
+        if (mc.player == null || mc.gameMode == null) {
             return false;
         }
 
@@ -94,7 +94,7 @@ public class InventoryManager {
      * @param item The item to pull from the inventory
      * @return True if the item could the swapped into the hotbar
      */
-    private boolean swapToHotbar(ClientPlayerEntity player, Item item) {
+    private boolean swapToHotbar(LocalPlayer player, Item item) {
         if (getHotbarSlotWithItem(player, new ItemStack(item)) != -1) { // Already in the hotbar dummy
             return true;
         }
@@ -108,26 +108,26 @@ public class InventoryManager {
         }
         hotbarSlots.get(nextSlot).addTicksLocked(10);
         hotbarSlots.get(nextSlot).waitingForItem = item;
-        player.getInventory().selectedSlot = nextSlot;
+        player.getInventory().selected = nextSlot;
         if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) {
             System.out.println("Swapping item from inventory: " + slot + " into hotbar -> " + nextSlot);
         }
-        swapAway(slot, nextSlot, player.playerScreenHandler);
+        swapAway(slot, nextSlot, player.inventoryMenu);
         delay += PrinterConfig.INVENTORY_DELAY.getIntegerValue();
         return true;
     }
 
-    public void pickSlot(WorldSchematic world, ClientPlayerEntity player, BlockPos pos) {
-        if (mc.interactionManager == null) {
+    public void pickSlot(WorldSchematic world, LocalPlayer player, BlockPos pos) {
+        if (mc.gameMode == null) {
             return;
         }
-        PlayerInventory inv = player.getInventory();
+        Inventory inv = player.getInventory();
         BlockState state = world.getBlockState(pos);
         ItemStack stack = MaterialCache.getInstance().getRequiredBuildItemForState(state, world, pos);
-        int slot = inv.getSlotWithStack(stack);
+        int slot = inv.findSlotMatchingItem(stack);
         boolean shouldPick = slot > 8;
         if (slot != -1 && !shouldPick) {
-            player.getInventory().selectedSlot = slot;
+            player.getInventory().selected = slot;
         } else if (slot != -1) {
             InventoryUtils.setPickedItemToHand(slot, stack, mc); // https://github.com/sakura-ryoko/litematica-printer/blob/f8e38a2b31708e61f8a5fad0f2989d6834495da4/src/main/java/me/aleksilassila/litematica/printer/actions/PrepareAction.java#L71
         } else if (Configs.Generic.PICK_BLOCK_SHULKERS.getBooleanValue()) {
@@ -136,26 +136,26 @@ public class InventoryManager {
                 if (slot > 8) {
                     InventoryUtils.setPickedItemToHand(slot, stack, mc);
                 } else {
-                    inv.selectedSlot = slot;
+                    inv.selected = slot;
                 }
             }
         }
     }
 
     private void depositCursorStack() {
-        mc.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(mc.player.currentScreenHandler.syncId));
-//        if (!mc.player.playerScreenHandler.getCursorStack().isEmpty()) {
-//            mc.player.getInventory().offerOrDrop(mc.player.playerScreenHandler.getCursorStack());
-//            mc.player.playerScreenHandler.setCursorStack(ItemStack.EMPTY);
+        mc.getConnection().send(new ServerboundContainerClosePacket(mc.player.containerMenu.containerId));
+//        if (!mc.player.inventoryMenu.getCursorStack().isEmpty()) {
+//            mc.player.getInventory().offerOrDrop(mc.player.inventoryMenu.getCursorStack());
+//            mc.player.inventoryMenu.setCursorStack(ItemStack.EMPTY);
 //        }
     }
 
-    public static int findSlotWithBoxWithItem(PlayerInventory inventory, ItemStack stackReference, boolean lestFirst) {
+    public static int findSlotWithBoxWithItem(Inventory inventory, ItemStack stackReference, boolean lestFirst) {
         int bestCount = lestFirst ? Integer.MAX_VALUE : 0;
         int bestSlot = -1;
 
-        for (int slotNum = 0; slotNum < inventory.main.size(); slotNum += 1) {
-            ItemStack itemStack = inventory.getStack(slotNum);
+        for (int slotNum = 0; slotNum < inventory.items.size(); slotNum += 1) {
+            ItemStack itemStack = inventory.getItem(slotNum);
             int count = shulkerBoxItemCount(itemStack, stackReference);
             if (lestFirst && count < bestCount && count > 0) {
                 bestCount = count;
@@ -170,7 +170,7 @@ public class InventoryManager {
     }
 
     public static int shulkerBoxItemCount(ItemStack stack, ItemStack referenceItem) {
-        DefaultedList<ItemStack> items = fi.dy.masa.malilib.util.InventoryUtils.getStoredItems(stack);
+        NonNullList<ItemStack> items = fi.dy.masa.malilib.util.InventoryUtils.getStoredItems(stack);
         int count = 0;
         if (!items.isEmpty()) {
             for (ItemStack item : items) {
@@ -184,21 +184,21 @@ public class InventoryManager {
     }
 
     public boolean select(ItemStack itemStack) {
-        ClientPlayerEntity player = mc.player;
-        if (player == null || mc.interactionManager == null) {
+        LocalPlayer player = mc.player;
+        if (player == null || mc.gameMode == null) {
             return false;
         }
 
         // Swap logic start
         if (itemStack != null) {
-            PlayerInventory inventory = player.getInventory();
+            Inventory inventory = player.getInventory();
 
-            // This thing is straight from MinecraftClient#doItemPick()
-            if (player.getAbilities().creativeMode) {
+            // This thing is straight from Minecraft#doItemPick()
+            if (player.getAbilities().instabuild) {
                 depositCursorStack();
                 this.addPickBlock(inventory, itemStack);
-                mc.interactionManager.clickCreativeStack(player.getStackInHand(Hand.MAIN_HAND), 36 + inventory.selectedSlot);
-                updateLastUsedSlot(inventory.selectedSlot);
+                mc.gameMode.handleCreativeModeItemAdd(player.getItemInHand(InteractionHand.MAIN_HAND), 36 + inventory.selected);
+                updateLastUsedSlot(inventory.selected);
                 return true;
             } else {
                 int hotbarSlot = getHotbarSlotWithItem(player, itemStack);
@@ -214,9 +214,9 @@ public class InventoryManager {
                         if (hotbarSlot == -1) {
                             return false;
                         }
-                        if (hotbarSlot != player.getInventory().selectedSlot) {
-                            player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(hotbarSlot));
-                            player.getInventory().selectedSlot = hotbarSlot;
+                        if (hotbarSlot != player.getInventory().selected) {
+                            player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
+                            player.getInventory().selected = hotbarSlot;
                         }
                         updateLastUsedSlot(hotbarSlot);
                         return false;
@@ -225,9 +225,9 @@ public class InventoryManager {
                 } else {
                     depositCursorStack();
                     // Switch to hotbar slot
-                    if (hotbarSlot != player.getInventory().selectedSlot) {
-                        player.networkHandler.sendPacket(new UpdateSelectedSlotC2SPacket(hotbarSlot));
-                        player.getInventory().selectedSlot = hotbarSlot;
+                    if (hotbarSlot != player.getInventory().selected) {
+                        player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
+                        player.getInventory().selected = hotbarSlot;
                     }
                     updateLastUsedSlot(hotbarSlot);
                     return true;
@@ -238,34 +238,34 @@ public class InventoryManager {
     }
 
     // https://github.com/sakura-ryoko/litematica-printer/blob/f8e38a2b31708e61f8a5fad0f2989d6834495da4/src/main/java/me/aleksilassila/litematica/printer/actions/PrepareAction.java#L95
-    private void addPickBlock(PlayerInventory inv, ItemStack stack) {
-        int slot = inv.getSlotWithStack(stack);
+    private void addPickBlock(Inventory inv, ItemStack stack) {
+        int slot = inv.findSlotMatchingItem(stack);
 
         if (slot >= 0 && slot < 9) {
-            inv.selectedSlot = slot;
+            inv.selected = slot;
         } else {
             if (slot == -1) {
-                inv.selectedSlot = inv.getSwappableHotbarSlot();
+                inv.selected = inv.getSuitableHotbarSlot();
 
-                if (!inv.main.get(inv.selectedSlot).isEmpty()) {
-                    int empty = inv.getEmptySlot();
+                if (!inv.items.get(inv.selected).isEmpty()) {
+                    int empty = inv.getFreeSlot();
 
                     if (empty != -1) {
-                        inv.main.set(empty, inv.main.get(inv.selectedSlot));
+                        inv.setItem(empty, inv.items.get(inv.selected));
                     }
                 }
-                inv.main.set(inv.selectedSlot, stack);
+                inv.setItem(inv.selected, stack);
             } else {
-                inv.swapSlotWithHotbar(slot);
+                inv.pickSlot(slot);
             }
         }
     }
 
-    public boolean swapAway(int inventorySlot, int hotbarSlot, PlayerScreenHandler screenHandler) {
-        ClientPlayNetworkHandler networkHandler = mc.getNetworkHandler();
-        if (mc.player == null || mc.interactionManager == null || networkHandler == null) return false;
+    public boolean swapAway(int inventorySlot, int hotbarSlot, InventoryMenu screenHandler) {
+        ClientPacketListener networkHandler = mc.getConnection();
+        if (mc.player == null || mc.gameMode == null || networkHandler == null) return false;
 
-        mc.interactionManager.clickSlot(screenHandler.syncId, inventorySlot, hotbarSlot, SlotActionType.SWAP, mc.player);
+        mc.gameMode.handleInventoryMouseClick(screenHandler.containerId, inventorySlot, hotbarSlot, ClickType.SWAP, mc.player);
         return true;
     }
 
@@ -320,17 +320,18 @@ public class InventoryManager {
      * @param itemStack The item to check for
      * @return The first slot with the given item
      */
-    private static int getBestInventorySlotWithItem(ClientPlayerEntity player, ItemStack itemStack) {
-        PlayerInventory inventory = player.getInventory();
+    private static int getBestInventorySlotWithItem(LocalPlayer player, ItemStack itemStack) {
+        Inventory inventory = player.getInventory();
 
         if (itemStack.isEmpty()) return -1;
 
         int lowestCount = 0;
         int lowestSlot = -1;
-        for (int i = 9; i < inventory.main.size(); ++i) {
-            if (!(inventory.main.get(i)).isEmpty() && ItemStack.areItemsAndComponentsEqual(itemStack, inventory.main.get(i))) {
-                if (inventory.main.get(i).getCount() < lowestCount || lowestSlot == -1) {
-                    lowestCount = inventory.main.get(i).getCount();
+        for (int i = 9; i < inventory.items.size(); ++i) {
+            ItemStack inventoryStack = inventory.items.get(i);
+            if (!inventoryStack.isEmpty() && ItemStack.isSameItemSameComponents(itemStack, inventoryStack)) {
+                if (inventoryStack.getCount() < lowestCount || lowestSlot == -1) {
+                    lowestCount = inventoryStack.getCount();
                     lowestSlot = i;
                 }
             }
@@ -342,13 +343,13 @@ public class InventoryManager {
     /**
      * Return a number between 0-8 representing the hotbar slot with the given item.
      */
-    public int getHotbarSlotWithItem(ClientPlayerEntity player, ItemStack itemStack) {
-        PlayerInventory inventory = player.getInventory();
+    public int getHotbarSlotWithItem(LocalPlayer player, ItemStack itemStack) {
+        Inventory inventory = player.getInventory();
 
         if (itemStack.isEmpty()) return -1;
 
         for (int i = 0; i < 9; ++i) {
-            if (!inventory.main.get(i).isEmpty() && ItemStack.areItemsEqual(inventory.main.get(i), itemStack)) {
+            if (!inventory.items.get(i).isEmpty() && ItemStack.isSameItem(inventory.items.get(i), itemStack)) {
 //                if (hotbarSlots.get(i).ticksLocked == 0) {
                 return i;
 //                }

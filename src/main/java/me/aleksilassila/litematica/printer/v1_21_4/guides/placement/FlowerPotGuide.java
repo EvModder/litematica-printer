@@ -1,8 +1,8 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.item.ItemStack;
-import net.minecraft.item.Items;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;

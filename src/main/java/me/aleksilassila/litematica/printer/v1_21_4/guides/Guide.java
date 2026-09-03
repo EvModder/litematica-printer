@@ -5,13 +5,13 @@ import me.aleksilassila.litematica.printer.v1_21_4.actions.Action;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.placement.PropertySpecificGuesserGuide;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.BlockHelperImpl;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.CoralBlock;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.property.Properties;
-import net.minecraft.state.property.Property;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.CoralBlock;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -29,16 +29,17 @@ abstract public class Guide extends BlockHelperImpl {
         this.targetState = state.targetState;
     }
 
-    protected boolean playerHasRightItem(ClientPlayerEntity player) {
+    protected boolean playerHasRightItem(LocalPlayer player) {
         return getRequiredItemStackSlot(player) != -1;
     }
 
-    public int getSlotWithItem(ClientPlayerEntity player, ItemStack itemStack) {
-        PlayerInventory inventory = player.getInventory();
+    public int getSlotWithItem(LocalPlayer player, ItemStack itemStack) {
+        Inventory inventory = player.getInventory();
 
-        for (int i = 0; i < inventory.main.size(); ++i) {
-            if (itemStack.isEmpty() && inventory.main.get(i).isOf(itemStack.getItem())) return i;
-            if (!inventory.main.get(i).isEmpty() && ItemStack.areItemsEqual(inventory.main.get(i), itemStack)) {
+        for (int i = 0; i < inventory.items.size(); ++i) {
+            ItemStack inventoryStack = inventory.items.get(i);
+            if (itemStack.isEmpty() && inventoryStack.is(itemStack.getItem())) return i;
+            if (!inventoryStack.isEmpty() && ItemStack.isSameItem(inventoryStack, itemStack)) {
                 return i;
             }
         }
@@ -46,9 +47,9 @@ abstract public class Guide extends BlockHelperImpl {
         return -1;
     }
 
-    protected int getRequiredItemStackSlot(ClientPlayerEntity player) {
-        if (player.getAbilities().creativeMode) {
-            return player.getInventory().selectedSlot;
+    protected int getRequiredItemStackSlot(LocalPlayer player) {
+        if (player.getAbilities().instabuild) {
+            return player.getInventory().selected;
         }
 
         ItemStack requiredItem = getRequiredItem(player).stream().findFirst().orElse(ItemStack.EMPTY);
@@ -57,7 +58,7 @@ abstract public class Guide extends BlockHelperImpl {
         return getSlotWithItem(player, requiredItem);
     }
 
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!playerHasRightItem(player)) return false;
 
         BlockState targetState = state.targetState;
@@ -66,7 +67,7 @@ abstract public class Guide extends BlockHelperImpl {
         return !statesEqual(targetState, currentState);
     }
 
-    abstract public @NotNull List<Action> execute(ClientPlayerEntity player);
+    abstract public @NotNull List<Action> execute(LocalPlayer player);
 
     abstract protected @NotNull List<ItemStack> getRequiredItems();
 
@@ -74,11 +75,11 @@ abstract public class Guide extends BlockHelperImpl {
      * Returns the first required item that player has access to,
      * or empty if the items are inaccessible.
      */
-    protected List<ItemStack> getRequiredItem(ClientPlayerEntity player) {
+    protected List<ItemStack> getRequiredItem(LocalPlayer player) {
         List<ItemStack> requiredItems = getRequiredItems();
 
         for (ItemStack requiredItem : requiredItems) {
-            if (player.getAbilities().creativeMode) return List.of(requiredItem);
+            if (player.getAbilities().instabuild) return List.of(requiredItem);
 
             int slot = getSlotWithItem(player, requiredItem);
             if (slot > -1)
@@ -93,14 +94,14 @@ abstract public class Guide extends BlockHelperImpl {
 
         loop:
         for (Property<?> property : state1.getProperties()) {
-            if (!PrinterConfig.WATERLOGGING.getBooleanValue() && property == Properties.WATERLOGGED && !(state1.getBlock() instanceof CoralBlock)) continue;
+            if (!PrinterConfig.WATERLOGGING.getBooleanValue() && property == BlockStateProperties.WATERLOGGED && !(state1.getBlock() instanceof CoralBlock)) continue;
 
             for (Property<?> ignoredProperty : propertiesToIgnore) {
                 if (property == ignoredProperty) continue loop;
             }
 
             try {
-                if (state1.get(property) != state2.get(property)) {
+                if (state1.getValue(property) != state2.getValue(property)) {
                     return false;
                 }
             } catch (Exception e) {
@@ -112,8 +113,8 @@ abstract public class Guide extends BlockHelperImpl {
     }
 
     protected static <T extends Comparable<T>> Optional<T> getProperty(BlockState blockState, Property<T> property) {
-        if (blockState.contains(property)) {
-            return Optional.of(blockState.get(property));
+        if (blockState.hasProperty(property)) {
+            return Optional.of(blockState.getValue(property));
         }
         return Optional.empty();
     }
@@ -125,9 +126,9 @@ abstract public class Guide extends BlockHelperImpl {
         // Always ignore redstone-volatile properties that can differ transiently in-world
         // to avoid blocking placement under redstone power.
         Property<?>[] redstoneVolatile = new Property<?>[] {
-                Properties.POWERED, // many blocks (buttons, rails, etc.)
-                Properties.TRIGGERED, // dispensers/dropper
-                Properties.ENABLED // hoppers
+                BlockStateProperties.POWERED, // many blocks (buttons, rails, etc.)
+                BlockStateProperties.TRIGGERED, // dispensers/dropper
+                BlockStateProperties.ENABLED // hoppers
         };
 
         if (PrinterConfig.PRINTER_IGNORE_ROTATION.getBooleanValue()) {

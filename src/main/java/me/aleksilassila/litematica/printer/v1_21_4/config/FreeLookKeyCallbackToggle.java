@@ -5,10 +5,10 @@ import fi.dy.masa.malilib.hotkeys.IKeybind;
 import fi.dy.masa.malilib.hotkeys.KeyAction;
 import fi.dy.masa.malilib.hotkeys.KeyCallbackToggleBooleanConfigWithMessage;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
-import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.Minecraft;
 
 public class FreeLookKeyCallbackToggle extends KeyCallbackToggleBooleanConfigWithMessage {
-    MinecraftClient mc = MinecraftClient.getInstance();
+    Minecraft mc = Minecraft.getInstance();
     public FreeLookKeyCallbackToggle(ConfigBoolean config) {
         super(config);
     }

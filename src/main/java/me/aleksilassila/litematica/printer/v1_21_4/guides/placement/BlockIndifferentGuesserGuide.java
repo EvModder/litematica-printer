@@ -2,7 +2,9 @@ package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
-import net.minecraft.block.*;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 
 /**
  * A GuesserGuide that ignores certain block state properties for specific blocks.
@@ -17,13 +19,13 @@ public class BlockIndifferentGuesserGuide extends GeneralPlacementGuide {
         Block targetBlock = targetState.getBlock();
         Block resultBlock = resultState.getBlock();
 
-        if (targetBlock instanceof BambooBlock) {
-            return resultBlock instanceof BambooBlock || resultBlock instanceof BambooShootBlock;
+        if (targetBlock instanceof BambooStalkBlock) {
+            return resultBlock instanceof BambooStalkBlock || resultBlock instanceof BambooSaplingBlock;
         }
 
         if (targetBlock instanceof BigDripleafStemBlock) {
             if (resultBlock instanceof BigDripleafBlock || resultBlock instanceof BigDripleafStemBlock) {
-                return resultState.get(HorizontalFacingBlock.FACING) == targetState.get(HorizontalFacingBlock.FACING);
+                return resultState.getValue(HorizontalDirectionalBlock.FACING) == targetState.getValue(HorizontalDirectionalBlock.FACING);
             }
         }
 
@@ -35,14 +37,14 @@ public class BlockIndifferentGuesserGuide extends GeneralPlacementGuide {
             }
         }
 
-        if (targetBlock instanceof TripwireBlock && resultBlock instanceof TripwireBlock) {
+        if (targetBlock instanceof TripWireBlock && resultBlock instanceof TripWireBlock) {
             return statesEqualIgnoreProperties(resultState, targetState,
-                    TripwireBlock.ATTACHED, TripwireBlock.DISARMED, TripwireBlock.POWERED, TripwireBlock.NORTH,
-                    TripwireBlock.EAST, TripwireBlock.SOUTH, TripwireBlock.WEST);
+                    TripWireBlock.ATTACHED, TripWireBlock.DISARMED, TripWireBlock.POWERED, TripWireBlock.NORTH,
+                    TripWireBlock.EAST, TripWireBlock.SOUTH, TripWireBlock.WEST);
         }
 
         if (targetBlock instanceof MushroomBlock) {
-            return statesEqualIgnoreProperties(resultState, targetState, MushroomBlock.DOWN, MushroomBlock.UP, MushroomBlock.WEST, MushroomBlock.NORTH, MushroomBlock.EAST, MushroomBlock.SOUTH);
+            return statesEqualIgnoreProperties(resultState, targetState, BlockStateProperties.DOWN, BlockStateProperties.UP, BlockStateProperties.WEST, BlockStateProperties.NORTH, BlockStateProperties.EAST, BlockStateProperties.SOUTH);
         }
 
         if (targetBlock instanceof GlowLichenBlock && PrinterConfig.PRINTER_ALLOW_NONE_EXACT_STATES.getBooleanValue()) {

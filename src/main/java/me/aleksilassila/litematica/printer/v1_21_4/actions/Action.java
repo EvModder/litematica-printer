@@ -1,8 +1,8 @@
 package me.aleksilassila.litematica.printer.v1_21_4.actions;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 
 public abstract class Action {
-    abstract public boolean send(MinecraftClient client, ClientPlayerEntity player);
+    abstract public boolean send(Minecraft client, LocalPlayer player);
 }

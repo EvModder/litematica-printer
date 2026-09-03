@@ -1,11 +1,11 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.Block;
-import net.minecraft.block.HorizontalFacingBlock;
-import net.minecraft.block.WallMountedBlock;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.Block;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.FaceAttachedHorizontalDirectionalBlock;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.core.Direction;
 
 import java.util.Collections;
 import java.util.List;
@@ -19,8 +19,8 @@ public class TorchGuide extends PropertySpecificGuesserGuide {
     @Override
     protected List<Direction> getPossibleSides() {
         // Prefer the wall-mounted FACING for wall torches; fallback to horizontal facing
-        Optional<Direction> facing = getProperty(targetState, WallMountedBlock.FACING);
-        if (facing.isEmpty()) facing = getProperty(targetState, HorizontalFacingBlock.FACING);
+        Optional<Direction> facing = getProperty(targetState, FaceAttachedHorizontalDirectionalBlock.FACING);
+        if (facing.isEmpty()) facing = getProperty(targetState, HorizontalDirectionalBlock.FACING);
 
         return facing
                 .map(direction -> Collections.singletonList(direction.getOpposite()))
@@ -28,7 +28,7 @@ public class TorchGuide extends PropertySpecificGuesserGuide {
     }
 
     @Override
-    protected Optional<Block> getRequiredItemAsBlock(ClientPlayerEntity player) {
+    protected Optional<Block> getRequiredItemAsBlock(LocalPlayer player) {
         return Optional.of(state.targetState.getBlock());
     }
 }

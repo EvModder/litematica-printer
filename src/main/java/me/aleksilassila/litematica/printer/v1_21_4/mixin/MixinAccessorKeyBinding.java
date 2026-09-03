@@ -1,12 +1,12 @@
 package me.aleksilassila.litematica.printer.v1_21_4.mixin;
 
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.KeyMapping;
+import com.mojang.blaze3d.platform.InputConstants;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Accessor;
 
-@Mixin(KeyBinding.class)
+@Mixin(KeyMapping.class)
 public interface MixinAccessorKeyBinding {
-    @Accessor("boundKey")
-    InputUtil.Key getBoundKey();
+    @Accessor("key")
+    InputConstants.Key getBoundKey();
 }

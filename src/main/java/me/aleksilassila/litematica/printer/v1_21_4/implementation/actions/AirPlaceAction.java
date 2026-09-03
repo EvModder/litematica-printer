@@ -3,64 +3,64 @@ package me.aleksilassila.litematica.printer.v1_21_4.implementation.actions;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.InteractAction;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.block.BlockState;
-import net.minecraft.block.FluidBlock;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.client.network.ClientPlayerInteractionManager;
-import net.minecraft.entity.player.PlayerInventory;
-import net.minecraft.item.BlockItem;
-import net.minecraft.network.packet.c2s.play.CloseHandledScreenC2SPacket;
-import net.minecraft.network.packet.c2s.play.HandSwingC2SPacket;
-import net.minecraft.network.packet.c2s.play.PlayerActionC2SPacket;
-import net.minecraft.screen.slot.SlotActionType;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
-import net.minecraft.util.math.BlockPos;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.LiquidBlock;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.client.multiplayer.MultiPlayerGameMode;
+import net.minecraft.world.entity.player.Inventory;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.network.protocol.game.ServerboundSwingPacket;
+import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 
 public class AirPlaceAction extends InteractAction {
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     public AirPlaceAction(PrinterPlacementContext context) {
         super(context);
     }
 
     @Override
-    protected ActionResult interact(MinecraftClient client, ClientPlayerEntity player, Hand hand, BlockHitResult hitResult) {
-        BlockPos pos = hitResult.isInsideBlock() ? hitResult.getBlockPos() : hitResult.getBlockPos().offset(hitResult.getSide());
+    protected InteractionResult interact(Minecraft client, LocalPlayer player, InteractionHand hand, BlockHitResult hitResult) {
+        BlockPos pos = hitResult.isInside() ? hitResult.getBlockPos() : hitResult.getBlockPos().relative(hitResult.getDirection());
 
         if (!context.canPlace()) {
-            return ActionResult.FAIL;
+            return InteractionResult.FAIL;
         }
         airPlace(pos);
-        return ActionResult.PASS;
+        return InteractionResult.PASS;
     }
 
     private void airPlace(BlockPos pos) {
-        ClientPlayNetworkHandler connection = mc.getNetworkHandler();
-        ClientPlayerInteractionManager interactionManager = mc.interactionManager;
+        ClientPacketListener connection = mc.getConnection();
+        MultiPlayerGameMode interactionManager = mc.gameMode;
         if (mc.player == null || connection == null || interactionManager == null) return;
 
-        if (mc.isInSingleplayer() && mc.player.getAbilities().creativeMode) {
-            BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getPos(), this.context.hitResult.getSide(), pos, true);
-            mc.interactionManager.interactBlock(mc.player, Hand.MAIN_HAND, blockHitResult);
-            mc.player.swingHand(Hand.MAIN_HAND, false);
+        if (mc.hasSingleplayerServer() && mc.player.getAbilities().instabuild) {
+            BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
+            mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, blockHitResult);
+            mc.player.swing(InteractionHand.MAIN_HAND);
             return;
         }
 
-        if (mc.player.getInventory().getStack(PlayerInventory.OFF_HAND_SLOT).getItem() instanceof BlockItem) {
-            mc.interactionManager.clickSlot(0, 45, 0, SlotActionType.PICKUP, mc.player);
-            mc.getNetworkHandler().sendPacket(new CloseHandledScreenC2SPacket(mc.player.playerScreenHandler.syncId));
+        if (mc.player.getInventory().getItem(Inventory.SLOT_OFFHAND).getItem() instanceof BlockItem) {
+            mc.gameMode.handleInventoryMouseClick(0, 45, 0, ClickType.PICKUP, mc.player);
+            mc.getConnection().send(new ServerboundContainerClosePacket(mc.player.inventoryMenu.containerId));
         }
-        connection.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
+        connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
 
-        Hand hand = Hand.OFF_HAND;
-        BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getPos(), this.context.hitResult.getSide(), pos, true);
-        interactionManager.interactBlock(mc.player, hand, blockHitResult);
-        mc.player.swingHand(Hand.MAIN_HAND, false);
-        connection.sendPacket(new HandSwingC2SPacket(hand));
-        connection.sendPacket(new PlayerActionC2SPacket(PlayerActionC2SPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ORIGIN, Direction.DOWN));
+        InteractionHand hand = InteractionHand.OFF_HAND;
+        BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
+        interactionManager.useItemOn(mc.player, hand, blockHitResult);
+        mc.player.swing(InteractionHand.MAIN_HAND);
+        connection.send(new ServerboundSwingPacket(hand));
+        connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
     }
 }

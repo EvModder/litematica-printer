@@ -1,10 +1,11 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.placement;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.*;
-import net.minecraft.block.enums.BlockHalf;
-import net.minecraft.state.property.Properties;
-import net.minecraft.util.math.Direction;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.level.block.state.properties.Half;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.core.Direction;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -20,10 +21,10 @@ public class FacingBlockGuide extends SlabGuide {
     protected List<Direction> getPossibleSides() {
         Block block = state.targetState.getBlock();
         if (block instanceof WallSkullBlock || block instanceof WallSignBlock || block instanceof WallBannerBlock) {
-            Optional<Direction> side = getProperty(state.targetState, Properties.HORIZONTAL_FACING).map(Direction::getOpposite);
+            Optional<Direction> side = getProperty(state.targetState, BlockStateProperties.HORIZONTAL_FACING).map(Direction::getOpposite);
             return side.map(Collections::singletonList).orElseGet(Collections::emptyList);
         }
-        if (block instanceof StairsBlock) {
+        if (block instanceof StairBlock) {
             Direction half = getRequiredHalf(state).getOpposite();
             return Arrays.stream(Direction.values()).filter(d -> d != half).toList();
         }
@@ -40,10 +41,10 @@ public class FacingBlockGuide extends SlabGuide {
         BlockState targetState = state.targetState;
         BlockState currentState = state.currentState;
 
-        if (!currentState.contains(StairsBlock.HALF)) {
-            return targetState.get(StairsBlock.HALF) == BlockHalf.TOP ? Direction.UP : Direction.DOWN;
-        } else if (currentState.get(StairsBlock.HALF) != targetState.get(StairsBlock.HALF)) {
-            return currentState.get(StairsBlock.HALF) == BlockHalf.TOP ? Direction.DOWN : Direction.UP;
+        if (!currentState.hasProperty(StairBlock.HALF)) {
+            return targetState.getValue(StairBlock.HALF) == Half.TOP ? Direction.UP : Direction.DOWN;
+        } else if (currentState.getValue(StairBlock.HALF) != targetState.getValue(StairBlock.HALF)) {
+            return currentState.getValue(StairBlock.HALF) == Half.TOP ? Direction.DOWN : Direction.UP;
         } else {
             return Direction.DOWN;
         }

@@ -2,19 +2,19 @@ package me.aleksilassila.litematica.printer.v1_21_4;
 
 import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.Perspective;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.CameraType;
 
 public class FreeLook {
     static FreeLook INSTANCE = null;
     float cameraYaw = 0;
     float cameraPitch = 0;
-    Perspective prevPerspective = Perspective.FIRST_PERSON;
-    MinecraftClient mc = MinecraftClient.getInstance();
+    CameraType prevPerspective = CameraType.FIRST_PERSON;
+    Minecraft mc = Minecraft.getInstance();
     boolean enabled = false;
     int ticksSinceLastRotation = 0;
 
-//    BooleanSetting changePers = addBooleanSetting("Change Perspective",true);
+//    BooleanSetting changePers = addBooleanSetting("Change CameraType",true);
 //    EnumSetting<Mode> cameraMode = addEnumSetting("Camera Mode",Mode.CAMERA);
 //    FloatSetting sensitivity = addFloatSetting("Sensitivity",8,0,10);
     private FreeLook() {
@@ -34,8 +34,8 @@ public class FreeLook {
             if (mc.player != null) {
                 // Reset player rotation. The mouse mixin only rotates the player by a delta. So without this the player
                 // rotation would be offset from the camera rotation.
-                mc.player.setYaw(cameraYaw);
-                mc.player.setPitch(cameraPitch);
+                mc.player.setYRot(cameraYaw);
+                mc.player.setXRot(cameraPitch);
             }
         }
         ticksSinceLastRotation++;
@@ -58,21 +58,21 @@ public class FreeLook {
         this.enabled = true;
         if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) System.out.println("FreeLook: onEnable");
 
-        cameraPitch = mc.player.getPitch();
-        cameraYaw = mc.player.getYaw();
-        prevPerspective = mc.options.getPerspective();
+        cameraPitch = mc.player.getXRot();
+        cameraYaw = mc.player.getYRot();
+        prevPerspective = mc.options.getCameraType();
 
         if (PrinterConfig.FREE_LOOK_THIRD_PERSON.getBooleanValue()) {
-            mc.options.setPerspective(Perspective.THIRD_PERSON_BACK);
+            mc.options.setCameraType(CameraType.THIRD_PERSON_BACK);
         } else {
-            mc.options.setPerspective(Perspective.FIRST_PERSON);
+            mc.options.setCameraType(CameraType.FIRST_PERSON);
         }
     }
 
     void onDisable() {
         this.enabled = false;
         if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) System.out.println("FreeLook: onDisable");
-        if (prevPerspective != null && mc.options.getPerspective() != prevPerspective /*&& changePers.getValue()*/) mc.options.setPerspective(prevPerspective);
+        if (prevPerspective != null && mc.options.getCameraType() != prevPerspective /*&& changePers.get()*/) mc.options.setCameraType(prevPerspective);
     }
 
     public boolean isEnabled() {
@@ -99,11 +99,11 @@ public class FreeLook {
         cameraPitch = v;
     }
 
-    public void setPrevPerspective(Perspective perspective) {
+    public void setPrevPerspective(CameraType perspective) {
         prevPerspective = perspective;
     }
 
-    public Perspective getPrevPerspective() {
+    public CameraType getPrevPerspective() {
         return prevPerspective;
     }
 }

@@ -1,7 +1,7 @@
 package me.aleksilassila.litematica.printer.v1_21_4.implementation;
 
 import me.aleksilassila.litematica.printer.v1_21_4.BlockHelper;
-import net.minecraft.block.ButtonBlock;
+import net.minecraft.world.level.block.ButtonBlock;
 
 import java.util.Arrays;
 

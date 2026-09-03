@@ -4,11 +4,11 @@ package me.aleksilassila.litematica.printer.v1_21_4.implementation.actions;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.InteractAction;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.util.ActionResult;
-import net.minecraft.util.Hand;
-import net.minecraft.util.hit.BlockHitResult;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionResult;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.phys.BlockHitResult;
 
 /*
  * @author IceTank
@@ -18,14 +18,14 @@ public class UseItemActionImpl extends InteractAction {
     public UseItemActionImpl(PrinterPlacementContext context) {
         super(context);
     }
-    private final MinecraftClient mc = MinecraftClient.getInstance();
+    private final Minecraft mc = Minecraft.getInstance();
     @Override
-    protected ActionResult interact(MinecraftClient client, ClientPlayerEntity player, Hand hand, BlockHitResult hitResult) {
-        ActionResult result = client.interactionManager.interactItem(player, hand);
-        if (!result.isAccepted()) {
+    protected InteractionResult interact(Minecraft client, LocalPlayer player, InteractionHand hand, BlockHitResult hitResult) {
+        InteractionResult result = client.gameMode.useItem(player, hand);
+        if (!result.consumesAction()) {
             if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) System.out.println("Failed to interact with block got " + result);
         }
-        mc.player.swingHand(Hand.MAIN_HAND);
+        mc.player.swing(InteractionHand.MAIN_HAND);
         return result;
     }
 }

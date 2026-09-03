@@ -1,7 +1,7 @@
 package me.aleksilassila.litematica.printer.v1_21_4.actions;
 
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -11,7 +11,7 @@ public class ActionChain extends Action {
     List<Action> actionsNextTick = new ArrayList<>();
 
     @Override
-    public boolean send(MinecraftClient client, ClientPlayerEntity player) {
+    public boolean send(Minecraft client, LocalPlayer player) {
         throw new RuntimeException("ActionChain should not be sent. Manually send each preTick and postTick action.");
     }
 

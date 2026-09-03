@@ -1,9 +1,9 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.CampfireBlock;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
+import net.minecraft.world.level.block.CampfireBlock;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Arrays;
@@ -21,7 +21,7 @@ public class CampfireExtinguishGuide extends InteractionGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!super.canExecute(player)) return false;
 
         return (currentState.getBlock() instanceof CampfireBlock) && !shouldBeLit && isLit;

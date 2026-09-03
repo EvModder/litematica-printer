@@ -2,11 +2,11 @@ package me.aleksilassila.litematica.printer.v1_21_4.actions;
 
 import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.util.math.Direction;
-import net.minecraft.util.math.Vec3d;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.core.Direction;
+import net.minecraft.world.phys.Vec3;
 import org.jetbrains.annotations.Nullable;
 
 public class PrepareAction extends Action {
@@ -38,7 +38,7 @@ public class PrepareAction extends Action {
         Direction lookDirection = context.lookDirection;
 
         if (lookDirection != null && lookDirection.getAxis().isHorizontal()) {
-            this.yaw = lookDirection.getUnitVector().y == 0 ? 0 : 90 * lookDirection.getUnitVector().y;
+            this.yaw = Direction.getYRot(lookDirection);
         } else {
             this.modifyYaw = false;
         }
@@ -61,8 +61,8 @@ public class PrepareAction extends Action {
         this.pitch = pitch;
     }
 
-    static float[] getNeededRotations(ClientPlayerEntity player, Vec3d vec) {
-        Vec3d eyesPos = player.getEyePos();
+    static float[] getNeededRotations(LocalPlayer player, Vec3 vec) {
+        Vec3 eyesPos = player.getEyePosition();
 
         double diffX = vec.x - eyesPos.x;
         double diffY = vec.y - eyesPos.y;
@@ -77,7 +77,7 @@ public class PrepareAction extends Action {
 //
 //        float yaw = (float) Math.toDegrees(Math.atan2(diffZ, diffX)) - 90F;
 //        float pitch = (float) -Math.toDegrees(Math.atan2(diffY, diffXZ));
-//        return new float[]{player.getYaw() + MathHelper.wrapDegrees(yaw - player.getYaw()), player.getPitch() + MathHelper.wrapDegrees(pitch - player.getPitch())
+//        return new float[]{player.getYRot() + Mth.wrapDegrees(yaw - player.getYRot()), player.getXRot() + Mth.wrapDegrees(pitch - player.getXRot())
 //        };
         return new float[]{(float) yaw, (float) pitch};
     }
@@ -102,8 +102,8 @@ public class PrepareAction extends Action {
     }
 
     @Override
-    public boolean send(MinecraftClient client, ClientPlayerEntity player) {
-        ItemStack itemStack = context.getStack();
+    public boolean send(Minecraft client, LocalPlayer player) {
+        ItemStack itemStack = context.getItemInHand();
 
         if (!Printer.inventoryManager.select(itemStack)) {
             return false;

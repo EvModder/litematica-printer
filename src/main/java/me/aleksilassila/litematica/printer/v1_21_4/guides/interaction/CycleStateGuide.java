@@ -1,11 +1,12 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
-import net.minecraft.block.*;
-import net.minecraft.client.network.ClientPlayerEntity;
-import net.minecraft.item.ItemStack;
-import net.minecraft.state.property.Properties;
-import net.minecraft.state.property.Property;
+import net.minecraft.world.level.block.*;
+import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.block.state.properties.BlockStateProperties;
+import net.minecraft.world.level.block.state.properties.Property;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.Collections;
@@ -13,14 +14,14 @@ import java.util.List;
 
 public class CycleStateGuide extends InteractionGuide {
     private static final Property<?>[] propertiesToIgnore = new Property[]{
-            Properties.POWERED,
-            Properties.LIT,
-            Properties.BLOCK_FACE,
-            Properties.FACING,
-            Properties.LOCKED,
-            Properties.BLOCK_HALF,
-            Properties.DOOR_HINGE,
-            Properties.IN_WALL,
+            BlockStateProperties.POWERED,
+            BlockStateProperties.LIT,
+            BlockStateProperties.ATTACH_FACE,
+            BlockStateProperties.FACING,
+            BlockStateProperties.LOCKED,
+            BlockStateProperties.HALF,
+            BlockStateProperties.DOOR_HINGE,
+            BlockStateProperties.IN_WALL,
             RepeaterBlock.FACING
     };
 
@@ -29,7 +30,7 @@ public class CycleStateGuide extends InteractionGuide {
     }
 
     @Override
-    public boolean canExecute(ClientPlayerEntity player) {
+    public boolean canExecute(LocalPlayer player) {
         if (!playerHasRightItem(player)) return false;
 
         if (currentState.getBlock() == Blocks.IRON_TRAPDOOR) {
@@ -44,7 +45,7 @@ public class CycleStateGuide extends InteractionGuide {
         BlockState currentState = state.currentState;
 
         if (currentState.getBlock() == Blocks.LEVER) {
-            if (currentState.get(LeverBlock.POWERED) == targetState.get(LeverBlock.POWERED)) {
+            if (currentState.getValue(LeverBlock.POWERED) == targetState.getValue(LeverBlock.POWERED)) {
                 return false; // Lever blocks must be toggled if POWERED property is incorrect, regardless of other properties
             }
             return true;
