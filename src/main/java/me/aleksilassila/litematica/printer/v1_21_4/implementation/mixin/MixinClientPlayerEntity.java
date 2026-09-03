@@ -76,7 +76,7 @@ public class MixinClientPlayerEntity extends AbstractClientPlayer {
 
             if (!version.equals(newVersion)) {
                 if (minecraft.player != null) {
-                    minecraft.gui.getChat().addMessage(Component.literal("New version of Litematica Printer available in https://github.com/aleksilassila/litematica-printer/releases"));
+                    minecraft.player.sendSystemMessage(Component.literal("New version of Litematica Printer available in https://github.com/aleksilassila/litematica-printer/releases"));
                 }
             }
         }).start();

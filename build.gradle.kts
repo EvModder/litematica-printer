@@ -1,6 +1,6 @@
 plugins {
     id("java")
-    id("fabric-loom").version("1.16.3")
+    id("net.fabricmc.fabric-loom").version("1.17.20")
 }
 
 val archives_base_name: String by project
@@ -14,7 +14,7 @@ val mixinextras_version: String by project
 version = "$mod_version+mc$minecraft_version"
 base.archivesName = archives_base_name
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+java.toolchain.languageVersion = JavaLanguageVersion.of(25)
 
 repositories {
     mavenCentral()
@@ -27,10 +27,9 @@ repositories {
 
 dependencies {
     minecraft("com.mojang:minecraft:$minecraft_version")
-    mappings(loom.officialMojangMappings())
-    modImplementation("net.fabricmc:fabric-loader:$loader_version")
-    modImplementation("maven.modrinth:malilib:$malilib_version")
-    modImplementation("maven.modrinth:litematica:$litematica_version")
+    implementation("net.fabricmc:fabric-loader:$loader_version")
+    implementation("maven.modrinth:malilib:$malilib_version")
+    implementation("maven.modrinth:litematica:$litematica_version")
 
     // Fabric Loader already ships MixinExtras, so compile against it without bundling a second copy.
     compileOnly("io.github.llamalad7:mixinextras-fabric:$mixinextras_version")

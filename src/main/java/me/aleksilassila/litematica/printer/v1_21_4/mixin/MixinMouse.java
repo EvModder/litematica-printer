@@ -33,7 +33,7 @@ public class MixinMouse {
             double k = this.accumulatedDX * h;
             double l = this.accumulatedDY * h;
             int m = 1;
-            if (this.minecraft.options.invertYMouse().get()) {
+            if (this.minecraft.options.invertMouseY().get()) {
                 m = -1;
             }
             float yaw = (float) (freeLook.getCameraYaw() + k * 0.15F);

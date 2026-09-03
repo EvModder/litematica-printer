@@ -85,7 +85,7 @@ public class Printer {
         if (PrinterConfig.STOP_ON_MOVEMENT.getBooleanValue() && player.getDeltaMovement().length() > 0.1)
             return false; // Stop if the player is moving
         if (PrinterConfig.PRINTER_DISABLE_IN_GUIS.getBooleanValue()) {
-            if (mc.screen != null) return false;
+            if (mc.gui.screen() != null) return false;
         }
 
         List<BlockPos> positions = getReachablePositions();

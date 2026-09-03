@@ -14,7 +14,7 @@ import net.minecraft.world.item.BlockItem;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
@@ -51,7 +51,7 @@ public class AirPlaceAction extends InteractAction {
         }
 
         if (mc.player.getInventory().getItem(Inventory.SLOT_OFFHAND).getItem() instanceof BlockItem) {
-            mc.gameMode.handleInventoryMouseClick(0, 45, 0, ClickType.PICKUP, mc.player);
+            mc.gameMode.handleContainerInput(0, 45, 0, ContainerInput.PICKUP, mc.player);
             mc.getConnection().send(new ServerboundContainerClosePacket(mc.player.inventoryMenu.containerId));
         }
         connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));

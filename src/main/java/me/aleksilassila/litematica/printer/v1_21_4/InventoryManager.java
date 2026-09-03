@@ -16,7 +16,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
 import net.minecraft.network.protocol.game.ServerboundSetCarriedItemPacket;
 import net.minecraft.world.inventory.InventoryMenu;
-import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.core.NonNullList;
 import net.minecraft.core.BlockPos;
@@ -108,7 +108,7 @@ public class InventoryManager {
         }
         hotbarSlots.get(nextSlot).addTicksLocked(10);
         hotbarSlots.get(nextSlot).waitingForItem = item;
-        player.getInventory().selected = nextSlot;
+        player.getInventory().setSelectedSlot(nextSlot);
         if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) {
             System.out.println("Swapping item from inventory: " + slot + " into hotbar -> " + nextSlot);
         }
@@ -127,7 +127,7 @@ public class InventoryManager {
         int slot = inv.findSlotMatchingItem(stack);
         boolean shouldPick = slot > 8;
         if (slot != -1 && !shouldPick) {
-            player.getInventory().selected = slot;
+            player.getInventory().setSelectedSlot(slot);
         } else if (slot != -1) {
             InventoryUtils.setPickedItemToHand(slot, stack, mc); // https://github.com/sakura-ryoko/litematica-printer/blob/f8e38a2b31708e61f8a5fad0f2989d6834495da4/src/main/java/me/aleksilassila/litematica/printer/actions/PrepareAction.java#L71
         } else if (Configs.Generic.PICK_BLOCK_SHULKERS.getBooleanValue()) {
@@ -136,7 +136,7 @@ public class InventoryManager {
                 if (slot > 8) {
                     InventoryUtils.setPickedItemToHand(slot, stack, mc);
                 } else {
-                    inv.selected = slot;
+                    inv.setSelectedSlot(slot);
                 }
             }
         }
@@ -154,7 +154,7 @@ public class InventoryManager {
         int bestCount = lestFirst ? Integer.MAX_VALUE : 0;
         int bestSlot = -1;
 
-        for (int slotNum = 0; slotNum < inventory.items.size(); slotNum += 1) {
+        for (int slotNum = 0; slotNum < inventory.getNonEquipmentItems().size(); slotNum += 1) {
             ItemStack itemStack = inventory.getItem(slotNum);
             int count = shulkerBoxItemCount(itemStack, stackReference);
             if (lestFirst && count < bestCount && count > 0) {
@@ -197,8 +197,8 @@ public class InventoryManager {
             if (player.getAbilities().instabuild) {
                 depositCursorStack();
                 this.addPickBlock(inventory, itemStack);
-                mc.gameMode.handleCreativeModeItemAdd(player.getItemInHand(InteractionHand.MAIN_HAND), 36 + inventory.selected);
-                updateLastUsedSlot(inventory.selected);
+                mc.gameMode.handleCreativeModeItemAdd(player.getItemInHand(InteractionHand.MAIN_HAND), 36 + inventory.getSelectedSlot());
+                updateLastUsedSlot(inventory.getSelectedSlot());
                 return true;
             } else {
                 int hotbarSlot = getHotbarSlotWithItem(player, itemStack);
@@ -214,9 +214,9 @@ public class InventoryManager {
                         if (hotbarSlot == -1) {
                             return false;
                         }
-                        if (hotbarSlot != player.getInventory().selected) {
+                        if (hotbarSlot != player.getInventory().getSelectedSlot()) {
                             player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
-                            player.getInventory().selected = hotbarSlot;
+                            player.getInventory().setSelectedSlot(hotbarSlot);
                         }
                         updateLastUsedSlot(hotbarSlot);
                         return false;
@@ -225,9 +225,9 @@ public class InventoryManager {
                 } else {
                     depositCursorStack();
                     // Switch to hotbar slot
-                    if (hotbarSlot != player.getInventory().selected) {
+                    if (hotbarSlot != player.getInventory().getSelectedSlot()) {
                         player.connection.send(new ServerboundSetCarriedItemPacket(hotbarSlot));
-                        player.getInventory().selected = hotbarSlot;
+                        player.getInventory().setSelectedSlot(hotbarSlot);
                     }
                     updateLastUsedSlot(hotbarSlot);
                     return true;
@@ -242,19 +242,19 @@ public class InventoryManager {
         int slot = inv.findSlotMatchingItem(stack);
 
         if (slot >= 0 && slot < 9) {
-            inv.selected = slot;
+            inv.setSelectedSlot(slot);
         } else {
             if (slot == -1) {
-                inv.selected = inv.getSuitableHotbarSlot();
+                inv.setSelectedSlot(inv.getSuitableHotbarSlot());
 
-                if (!inv.items.get(inv.selected).isEmpty()) {
+                if (!inv.getNonEquipmentItems().get(inv.getSelectedSlot()).isEmpty()) {
                     int empty = inv.getFreeSlot();
 
                     if (empty != -1) {
-                        inv.setItem(empty, inv.items.get(inv.selected));
+                        inv.setItem(empty, inv.getNonEquipmentItems().get(inv.getSelectedSlot()));
                     }
                 }
-                inv.setItem(inv.selected, stack);
+                inv.setItem(inv.getSelectedSlot(), stack);
             } else {
                 inv.pickSlot(slot);
             }
@@ -265,7 +265,7 @@ public class InventoryManager {
         ClientPacketListener networkHandler = mc.getConnection();
         if (mc.player == null || mc.gameMode == null || networkHandler == null) return false;
 
-        mc.gameMode.handleInventoryMouseClick(screenHandler.containerId, inventorySlot, hotbarSlot, ClickType.SWAP, mc.player);
+        mc.gameMode.handleContainerInput(screenHandler.containerId, inventorySlot, hotbarSlot, ContainerInput.SWAP, mc.player);
         return true;
     }
 
@@ -327,8 +327,8 @@ public class InventoryManager {
 
         int lowestCount = 0;
         int lowestSlot = -1;
-        for (int i = 9; i < inventory.items.size(); ++i) {
-            ItemStack inventoryStack = inventory.items.get(i);
+        for (int i = 9; i < inventory.getNonEquipmentItems().size(); ++i) {
+            ItemStack inventoryStack = inventory.getNonEquipmentItems().get(i);
             if (!inventoryStack.isEmpty() && ItemStack.isSameItemSameComponents(itemStack, inventoryStack)) {
                 if (inventoryStack.getCount() < lowestCount || lowestSlot == -1) {
                     lowestCount = inventoryStack.getCount();
@@ -349,7 +349,7 @@ public class InventoryManager {
         if (itemStack.isEmpty()) return -1;
 
         for (int i = 0; i < 9; ++i) {
-            if (!inventory.items.get(i).isEmpty() && ItemStack.isSameItem(inventory.items.get(i), itemStack)) {
+            if (!inventory.getNonEquipmentItems().get(i).isEmpty() && ItemStack.isSameItem(inventory.getNonEquipmentItems().get(i), itemStack)) {
 //                if (hotbarSlots.get(i).ticksLocked == 0) {
                 return i;
 //                }

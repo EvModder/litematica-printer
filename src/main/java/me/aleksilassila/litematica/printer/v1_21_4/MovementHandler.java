@@ -30,9 +30,9 @@ public class MovementHandler {
         }
 
         // Disable in inventories
-        if (mc.screen != null) {
+        if (mc.gui.screen() != null) {
             if (PrinterConfig.MOVE_WHILE_IN_INVENTORY.getBooleanValue()) {
-                if (mc.screen instanceof CraftingScreen || mc.screen instanceof CreativeModeInventoryScreen) {
+                if (mc.gui.screen() instanceof CraftingScreen || mc.gui.screen() instanceof CreativeModeInventoryScreen) {
                     return;
                 }
             } else {
@@ -43,7 +43,7 @@ public class MovementHandler {
         // Get current inputs
         InputDirections currentInputDirection = InputDirections.getCurrentInput();
 
-        float cameraYaw = mc.gameRenderer.getMainCamera().getYRot() % 360;
+        float cameraYaw = mc.gameRenderer.mainCamera().yRot() % 360;
         if (currentInputDirection != InputDirections.NONE) {
             // lastPlayerInputDirection = currentInputDirection;
             // Calculate resulting control direction and apply them
@@ -207,6 +207,6 @@ public class MovementHandler {
     }
 
     static boolean isKeyPressed(KeyMapping keyBinding) {
-        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow().getWindow(), ((MixinAccessorKeyBinding) keyBinding).getBoundKey().getValue());
+        return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), ((MixinAccessorKeyBinding) keyBinding).getBoundKey().getValue());
     }
 }
