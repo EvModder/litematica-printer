@@ -1,6 +1,7 @@
-# Build the project for every push and submitted pull request. Each build is
-# kept as a 90-day artifact, and pushes to the default branch also refresh a
-# rolling "latest development build" release.
+# Build every supported Minecraft version for each push and submitted pull
+# request. Each build is kept as a 90-day artifact, and pushes to the default
+# branch also refresh a rolling "latest development build" release carrying one
+# jar per Minecraft version.
 
 name: Build
 
@@ -33,7 +34,7 @@ jobs:
           distribution: temurin
           java-version: 25
 
-      - name: Build
+      - name: Build all Minecraft versions
         run: ./gradlew build
 
       - name: Upload commit artifact
@@ -41,13 +42,12 @@ jobs:
         with:
           name: litematica-printer-${{ github.sha }}
           path: |
-            build/libs/*.jar
-            !build/libs/*-sources.jar
-            !build/libs/*-javadoc.jar
+            versions/*/build/libs/*.jar
+            !versions/*/build/libs/*-sources.jar
+            !versions/*/build/libs/*-javadoc.jar
           if-no-files-found: error
           retention-days: 90
           compression-level: 0
-          archive: false
 
       - name: Update latest development release
         if: github.event_name == 'push' && github.ref_name == github.event.repository.default_branch
@@ -55,8 +55,12 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: latest-build
         run: |
-          mcver=$(sed -n 's/^minecraft_version=//p' gradle.properties)
-          cp "build/libs/"*"+mc${mcver}.jar" "litematica-printer-latest-mc${mcver}.jar"
+          # One rolling asset per Minecraft version, so versions do not clobber each other.
+          for jar in versions/*/build/libs/*.jar; do
+            case "$jar" in *-sources.jar|*-javadoc.jar) continue ;; esac
+            mcver=${jar##*+mc}
+            cp "$jar" "litematica-printer-latest-mc${mcver%.jar}.jar"
+          done
           notes="Built from [\`${GITHUB_SHA}\`](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/commit/${GITHUB_SHA}) by [GitHub Actions](${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID})."
 
           if previous=$(gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/${RELEASE_TAG}" --jq '.object.sha' 2>/dev/null); then
