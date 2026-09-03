@@ -1,34 +1,47 @@
 plugins {
     id("java")
-    id("fabric-loom").version("1.7-SNAPSHOT").apply(false)
-}
-
-subprojects {
-    apply<JavaPlugin>()
-    apply(plugin = "fabric-loom")
-    repositories {
-        mavenLocal()
-        mavenCentral()
-    }
-
-    java {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
-    }
+    id("fabric-loom").version("1.16.3")
 }
 
 val archives_base_name: String by project
 val mod_version: String by project
+val minecraft_version: String by project
+val yarn_mappings: String by project
+val loader_version: String by project
+val malilib_version: String by project
+val litematica_version: String by project
+val mixinextras_version: String by project
 
-val buildAll = tasks.create("buildAll") {
-    dependsOn(":v1_21_4:build")
-    // This isn't working.... you still have to run each build individually
-/*    tasks.findByName(":v1_19_3:build")?.mustRunAfter(":v1_19_4:build")
-    tasks.findByName(":v1_19:build")?.mustRunAfter(":v1_19_3:build")
-    tasks.findByName(":v1_18:build")?.mustRunAfter(":v1_19:build")
-    tasks.findByName(":v1_17:build")?.mustRunAfter(":v1_18:build")*/
+version = "$mod_version+mc$minecraft_version"
+base.archivesName = archives_base_name
 
-    doLast {
-//        println("Copying files...")
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+repositories {
+    mavenCentral()
+
+    exclusiveContent {
+        forRepository { maven("https://api.modrinth.com/maven") { name = "Modrinth" } }
+        filter { includeGroup("maven.modrinth") }
+    }
+}
+
+dependencies {
+    minecraft("com.mojang:minecraft:$minecraft_version")
+    mappings("net.fabricmc:yarn:$yarn_mappings:v2")
+    modImplementation("net.fabricmc:fabric-loader:$loader_version")
+    modImplementation("maven.modrinth:malilib:$malilib_version")
+    modImplementation("maven.modrinth:litematica:$litematica_version")
+
+    // Fabric Loader already ships MixinExtras, so compile against it without bundling a second copy.
+    compileOnly("io.github.llamalad7:mixinextras-fabric:$mixinextras_version")
+    annotationProcessor("io.github.llamalad7:mixinextras-fabric:$mixinextras_version")
+}
+
+tasks.withType<ProcessResources> {
+    inputs.property("version", mod_version)
+
+    filesMatching("fabric.mod.json") {
+        expand(mapOf("version" to mod_version))
     }
 }
