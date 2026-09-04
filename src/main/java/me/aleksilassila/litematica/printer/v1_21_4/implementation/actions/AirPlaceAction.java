@@ -9,12 +9,9 @@ import net.minecraft.client.Minecraft;
 import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
-import net.minecraft.world.entity.player.Inventory;
-import net.minecraft.world.item.BlockItem;
-import net.minecraft.network.protocol.game.ServerboundContainerClosePacket;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
-import net.minecraft.world.inventory.ContainerInput;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
@@ -50,10 +47,11 @@ public class AirPlaceAction extends InteractAction {
             return;
         }
 
-        if (mc.player.getInventory().getItem(Inventory.SLOT_OFFHAND).getItem() instanceof BlockItem) {
-            mc.gameMode.handleContainerInput(0, 45, 0, ContainerInput.PICKUP, mc.player);
-            mc.getConnection().send(new ServerboundContainerClosePacket(mc.player.inventoryMenu.containerId));
-        }
+        // The raw SWAP_ITEM_WITH_OFFHAND packet swaps hands server-side only, so the client
+        // inventory must be swapped in lockstep or the useItemOn prediction below runs against
+        // a stale offhand stack and the two sides drift apart (the old offhand-eviction +
+        // slot-update-suppression approach; it dropped offhand items when the inventory was full).
+        swapHandStacksLocally(mc.player);
         connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
 
         InteractionHand hand = InteractionHand.OFF_HAND;
@@ -61,6 +59,18 @@ public class AirPlaceAction extends InteractAction {
         interactionManager.useItemOn(mc.player, hand, blockHitResult);
         mc.player.swing(InteractionHand.MAIN_HAND);
         connection.send(new ServerboundSwingPacket(hand));
+        swapHandStacksLocally(mc.player);
         connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
+    }
+
+    /**
+     * Mirrors what the server does when it receives SWAP_ITEM_WITH_OFFHAND
+     * (ServerGamePacketListenerImpl swaps the two hand stacks via setItemInHand).
+     */
+    private void swapHandStacksLocally(LocalPlayer player) {
+        ItemStack mainStack = player.getItemInHand(InteractionHand.MAIN_HAND);
+        ItemStack offStack = player.getItemInHand(InteractionHand.OFF_HAND);
+        player.setItemInHand(InteractionHand.MAIN_HAND, offStack);
+        player.setItemInHand(InteractionHand.OFF_HAND, mainStack);
     }
 }

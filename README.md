@@ -8,6 +8,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- Fixes airplace throwing out offhand items: hand swaps are mirrored client-side instead of evicting through the cursor, so nothing is dropped when the inventory is full (`printerAirPlaceOffhandSlotSuppress` is now a legacy opt-in, default off).
 - Fixes freelook player rotation drifting away from the camera rotation.
 - Stops the printer config tab from duplicating litematica's Generic options.
 - Keeps printing when the chat is open even if `printerDisableInGuis` is enabled.
