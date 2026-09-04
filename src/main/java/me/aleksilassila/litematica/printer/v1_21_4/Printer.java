@@ -9,6 +9,7 @@ import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guide;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guides;
 import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.entity.player.Abilities;
 import net.minecraft.core.BlockPos;
@@ -85,7 +86,7 @@ public class Printer {
         if (PrinterConfig.STOP_ON_MOVEMENT.getBooleanValue() && player.getDeltaMovement().length() > 0.1)
             return false; // Stop if the player is moving
         if (PrinterConfig.PRINTER_DISABLE_IN_GUIS.getBooleanValue()) {
-            if (mc.gui.screen() != null) return false;
+            if (mc.gui.screen() != null && !(mc.gui.screen() instanceof ChatScreen)) return false;
         }
 
         List<BlockPos> positions = getReachablePositions();

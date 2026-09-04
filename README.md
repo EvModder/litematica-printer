@@ -10,5 +10,6 @@ Build with `./gradlew build` (Java 25).
 
 - Fixes freelook player rotation drifting away from the camera rotation.
 - Stops the printer config tab from duplicating litematica's Generic options.
+- Keeps printing when the chat is open even if `printerDisableInGuis` is enabled.
 - Builds Minecraft 26.2 and 1.21.4 from one source tree via Stonecutter.
 - Builds a 90-day GitHub artifact for every commit, and retains latest successful build for [26.2](https://github.com/EvModder/litematica-printer/releases/download/latest-build/litematica-printer-latest-mc26.2.jar) and [1.21.4](https://github.com/EvModder/litematica-printer/releases/download/latest-build/litematica-printer-latest-mc1.21.4.jar).
