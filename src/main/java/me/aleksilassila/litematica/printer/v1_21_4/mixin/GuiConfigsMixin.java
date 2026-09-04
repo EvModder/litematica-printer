@@ -58,4 +58,14 @@ public class GuiConfigsMixin {
     private List<ConfigHotkey> moreHotkeys() {
         return LitematicaMixinMod.getHotkeyList();
     }
+
+    @Redirect(method = "getAllConfigs", at = @At(value = "FIELD", target = "Lfi/dy/masa/litematica/config/Configs$Generic;OPTIONS:Lcom/google/common/collect/ImmutableList;"))
+    private ImmutableList<IConfigBase> moreAllOptions() {
+        return LitematicaMixinMod.getConfigList();
+    }
+
+    @Redirect(method = "getAllConfigs", at = @At(value = "FIELD", target = "Lfi/dy/masa/litematica/config/Hotkeys;HOTKEY_LIST:Ljava/util/List;"))
+    private List<ConfigHotkey> moreAllHotkeys() {
+        return LitematicaMixinMod.getHotkeyList();
+    }
 }

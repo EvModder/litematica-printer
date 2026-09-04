@@ -1,7 +1,6 @@
 package me.aleksilassila.litematica.printer.v1_21_4.config;
 
 import com.google.common.collect.ImmutableList;
-import fi.dy.masa.litematica.config.Configs;
 import fi.dy.masa.malilib.MaLiLib;
 import fi.dy.masa.malilib.config.IConfigBase;
 import fi.dy.masa.malilib.config.IConfigOptionListEntry;
@@ -67,7 +66,7 @@ public class PrinterConfig {
     public static final ConfigBoolean WATERLOGGING = new ConfigBoolean("printerWaterlogging", false, "Automatically waterlog blocks with water buckets that should be waterlogged in the schematic.");
 
     public ImmutableList<IConfigBase> getOptions() {
-        List<IConfigBase> list = new java.util.ArrayList<>(Configs.Generic.OPTIONS);
+        List<IConfigBase> list = new java.util.ArrayList<>();
         list.add(TICK_DELAY);
         list.add(BLOCK_TIMEOUT);
         list.add(ROTATE_PLAYER);
