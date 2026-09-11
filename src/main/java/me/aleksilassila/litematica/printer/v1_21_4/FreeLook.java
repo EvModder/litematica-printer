@@ -4,6 +4,7 @@ import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.CameraType;
+import net.minecraft.world.entity.Entity;
 
 public class FreeLook {
     static FreeLook INSTANCE = null;
@@ -75,12 +76,23 @@ public class FreeLook {
         if (prevPerspective != null && mc.options.getCameraType() != prevPerspective /*&& changePers.get()*/) mc.options.setCameraType(prevPerspective);
     }
 
+    /**
+     * True when another mod has taken the camera off the player, as a freecam does.
+     */
+    public boolean isExternalCameraActive() {
+        Entity camera = mc.getCameraEntity();
+        return (camera != null && camera != mc.player) || WurstFreecamCompat.isActive();
+    }
+
     public boolean isEnabled() {
-        return enabled;
+        // Stand down while another mod owns the camera, so its freecam keeps control of both
+        // the view and what the mouse rotates. Printing still rotates the player itself:
+        // Printer#rotate does not consult free look.
+        return enabled && !isExternalCameraActive();
     }
 
     public boolean shouldRotate() {
-        return enabled && PrinterConfig.FREE_LOOK_LOOK_BACK.getIntegerValue() != 0 && ticksSinceLastRotation > PrinterConfig.FREE_LOOK_LOOK_BACK.getIntegerValue();
+        return isEnabled() && PrinterConfig.FREE_LOOK_LOOK_BACK.getIntegerValue() != 0 && ticksSinceLastRotation > PrinterConfig.FREE_LOOK_LOOK_BACK.getIntegerValue();
     }
 
     public float getCameraYaw() {
