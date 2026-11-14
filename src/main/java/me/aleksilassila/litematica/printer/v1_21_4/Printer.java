@@ -94,6 +94,8 @@ public class Printer {
             if (mc.gui.screen() != null && !(mc.gui.screen() instanceof ChatScreen)) return false;
         }
 
+        if (InteractLimiter.remaining() <= 0) return false;
+
         findBlock:
         for (BlockPos position : getReachablePositions()) {
             if (blockPosTimeout.containsKey(position)) continue; // From block timeout. Don't place already placed blocks.

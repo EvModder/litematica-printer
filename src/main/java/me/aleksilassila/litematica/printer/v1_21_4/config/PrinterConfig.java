@@ -32,6 +32,8 @@ public class PrinterConfig {
 
     public static final ConfigInteger TICK_DELAY = new ConfigInteger("printerTickDelay", 0, 0, 100, "Tick delay between actions. 0 = no delay. Printer is limited to one action per tick.");
     public static final ConfigInteger BLOCK_TIMEOUT = new ConfigInteger("printerBlockTimeout", 10, 0, 100, "How many ticks to wait before trying to place the same block again.");
+    public static final ConfigInteger INTERACT_LIMIT = new ConfigInteger("printerInteractLimit", 9, 0, 100, "Maximum block interactions sent to the server within printerInteractTimeframe, counting your own clicks.\nThe printer waits instead of exceeding it. 0 = no limit.");
+    public static final ConfigInteger INTERACT_TIMEFRAME = new ConfigInteger("printerInteractTimeframe", 310, 50, 5000, "Length in milliseconds of the time frame printerInteractLimit applies to.");
     public static final ConfigBoolean ROTATE_PLAYER = new ConfigBoolean("printerRotatePlayer", false, "Rotate the player to face the block to place.");
     public static final ConfigBoolean PRINTER_GRIM_ROTATION = new ConfigBoolean("printerGrimRotate", true, "Allows you to place blocks anywhere while walking or using baritone.");
     public static final ConfigBoolean STOP_ON_MOVEMENT = new ConfigBoolean("printerStopOnMovement", false, "Stop the printer if the player velocity is to high.");
@@ -69,6 +71,8 @@ public class PrinterConfig {
         List<IConfigBase> list = new java.util.ArrayList<>();
         list.add(TICK_DELAY);
         list.add(BLOCK_TIMEOUT);
+        list.add(INTERACT_LIMIT);
+        list.add(INTERACT_TIMEFRAME);
         list.add(ROTATE_PLAYER);
         list.add(PRINTER_GRIM_ROTATION);
         list.add(STOP_ON_MOVEMENT);
