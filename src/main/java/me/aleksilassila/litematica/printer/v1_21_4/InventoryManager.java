@@ -102,7 +102,7 @@ public class InventoryManager {
         if (slot == -1) {
             return false;
         }
-        int nextSlot = nextHotbarSlot();
+        int nextSlot = nextHotbarSlot(player.getInventory());
         if (nextSlot == -1) {
             return false;
         }
@@ -270,17 +270,19 @@ public class InventoryManager {
     }
 
     /**
-     * Returns the next available slot for a new item. Returns the slot to the end of the queue after returning.
+     * Prefers empty usable slots, then falls back to the configured inventory management order.
      * Range from 0-8
      *
      * @return The next available slot
      */
-    private int nextHotbarSlot() {
+    private int nextHotbarSlot(Inventory inventory) {
         final String mode = PrinterConfig.PRINTER_INVENTORY_MANAGEMENT_MODE.getStringValue();
+        List<Integer> emptySlots = USABLE_SLOTS.stream().filter(slot -> inventory.getItem(slot).isEmpty()).toList();
+        List<Integer> preferredSlots = emptySlots.isEmpty() ? USABLE_SLOTS : emptySlots;
 
         if (PrinterConfig.InventoryManagementModeEnum.LEAST_USED.is(mode)) {
             if (!lastUsedSlots.isEmpty()) {
-                List<Integer> usableSlots = lastUsedSlots.stream().filter(USABLE_SLOTS::contains).toList();
+                List<Integer> usableSlots = lastUsedSlots.stream().filter(preferredSlots::contains).toList();
                 if (usableSlots.isEmpty()) {
                     return -1;
                 }
@@ -294,7 +296,7 @@ public class InventoryManager {
             }
         } else if (PrinterConfig.InventoryManagementModeEnum.ROLLING.is(mode)) {
             if (!rollingSlots.isEmpty()) {
-                List<Integer> usableSlots = rollingSlots.stream().filter(USABLE_SLOTS::contains).toList();
+                List<Integer> usableSlots = rollingSlots.stream().filter(preferredSlots::contains).toList();
                 if (usableSlots.isEmpty()) {
                     return -1;
                 }

@@ -7,6 +7,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- Moves items into an empty hotbar slot when one is free instead of replacing one in use.
 - Fixes airplace throwing out offhand item (`printerAirPlaceOffhandSlotSuppress` is now legacy; default off).
 - Fixes FreeLook drifting away from the camera rotation, and stops it from fighting with other mods' Freecams.
 - Keeps printing when the chat is open even if `printerDisableInGuis` is enabled.
