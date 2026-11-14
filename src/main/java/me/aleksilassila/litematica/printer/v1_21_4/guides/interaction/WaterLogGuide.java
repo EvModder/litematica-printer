@@ -118,6 +118,11 @@ public class WaterLogGuide extends GeneralPlacementGuide {
     }
 
     @Override
+    public @Nullable PrinterPlacementContext getBatchContext(LocalPlayer player) {
+        return null; // Empties a bucket instead of placing a block
+    }
+
+    @Override
     public @NotNull List<Action> execute(LocalPlayer player) {
         List<Action> actions = new ArrayList<>();
 

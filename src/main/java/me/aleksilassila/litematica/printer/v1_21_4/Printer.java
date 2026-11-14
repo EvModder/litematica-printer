@@ -8,6 +8,8 @@ import me.aleksilassila.litematica.printer.v1_21_4.actions.Action;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guide;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.Guides;
+import me.aleksilassila.litematica.printer.v1_21_4.guides.placement.PlacementGuide;
+import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.screens.ChatScreen;
 import net.minecraft.client.player.LocalPlayer;
@@ -94,28 +96,42 @@ public class Printer {
             if (mc.gui.screen() != null && !(mc.gui.screen() instanceof ChatScreen)) return false;
         }
 
-        if (InteractLimiter.remaining() <= 0) return false;
+        int placementsPerTick = PrinterConfig.PLACEMENTS_PER_TICK.getIntegerValue();
+        int budget = Math.min(InteractLimiter.remaining(), placementsPerTick);
+        if (budget <= 0) return false;
 
-        findBlock:
-        for (BlockPos position : getReachablePositions()) {
-            if (blockPosTimeout.containsKey(position)) continue; // From block timeout. Don't place already placed blocks.
+        try (PlacementBatch batch = new PlacementBatch(mc, player, budget)) {
+            findBlock:
+            for (BlockPos position : getReachablePositions()) {
+                if (blockPosTimeout.containsKey(position)) continue; // From block timeout. Don't place already placed blocks.
 
-            SchematicBlockState state = new SchematicBlockState(player.level(), worldSchematic, position);
-            if (state.targetState.equals(state.currentState) || state.targetState.isAir()) continue;
+                SchematicBlockState state = new SchematicBlockState(player.level(), worldSchematic, position);
+                if (state.targetState.equals(state.currentState) || state.targetState.isAir()) continue;
+                if (batch.rejects(state.targetState.getBlock().asItem())) continue;
 
-            Guide[] guides = interactionGuides.getInteractionGuides(state);
+                Guide[] guides = interactionGuides.getInteractionGuides(state);
 
-            for (Guide guide : guides) {
-                if (guide.canExecute(player)) {
-                    List<Action> actions = guide.execute(player);
-                    actionHandler.addActions(actions.toArray(Action[]::new));
-                    return true;
+                for (Guide guide : guides) {
+                    if (guide.canExecute(player)) {
+                        PrinterPlacementContext context = placementsPerTick > 1 && guide instanceof PlacementGuide placement
+                                ? placement.getBatchContext(player) : null;
+                        if (context != null) {
+                            batch.place(context);
+                            if (batch.isFull()) break findBlock;
+                            continue findBlock;
+                        }
+
+                        // Everything else spans two ticks and occupies the action handler until the next one.
+                        List<Action> actions = guide.execute(player);
+                        actionHandler.addActions(actions.toArray(Action[]::new));
+                        return true;
+                    }
+                    if (guide.skipOtherGuides()) continue findBlock;
                 }
-                if (guide.skipOtherGuides()) continue findBlock;
             }
-        }
 
-        return false;
+            return batch.getPlaced() > 0;
+        }
     }
 
     private List<BlockPos> getBlocksPlayerOccupied() {

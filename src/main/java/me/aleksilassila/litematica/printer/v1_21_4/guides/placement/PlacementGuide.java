@@ -120,6 +120,25 @@ abstract public class PlacementGuide extends Guide {
         return Shapes.joinIsNotEmpty(Shapes.create(playerShape), shape, BooleanOp.AND);
     }
 
+    /**
+     * Returns the context for placing this block right away as part of a {@link me.aleksilassila.litematica.printer.v1_21_4.PlacementBatch},
+     * or null if it has to go through {@link #execute} because something takes a tick to reach the server:
+     * sneaking, or a look that only rotates the player and leaves with the next movement packet.
+     */
+    public @Nullable PrinterPlacementContext getBatchContext(LocalPlayer player) {
+        PrinterPlacementContext ctx = getPlacementContext(player);
+        if (ctx == null || ctx.shouldSneak) return null;
+        if (!ctx.isAirPlace && PrinterConfig.PRINTER_AIRPLACE.getBooleanValue() && PrinterConfig.PRINTER_AIRPLACE_ONLY.getBooleanValue()) {
+            return null;
+        }
+
+        boolean looks = !ctx.isAirPlace || ctx.lookDirection != null;
+        if (looks && PrinterConfig.ROTATE_PLAYER.getBooleanValue() && !PrinterConfig.PRINTER_GRIM_ROTATION.getBooleanValue()) {
+            return null;
+        }
+        return ctx;
+    }
+
     @Override
     public @NotNull List<Action> execute(LocalPlayer player) {
         List<Action> actions = new ArrayList<>();

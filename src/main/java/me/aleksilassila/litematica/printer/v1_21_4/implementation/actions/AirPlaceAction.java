@@ -24,9 +24,32 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 
 public class AirPlaceAction extends InteractAction {
-    private final Minecraft mc = Minecraft.getInstance();
+    private static final Minecraft mc = Minecraft.getInstance();
+    /**
+     * Set while a batch keeps the placement item in the off hand, so its placements share one pair of swaps.
+     */
+    private static boolean batchSwapped = false;
+
     public AirPlaceAction(PrinterPlacementContext context) {
         super(context);
+    }
+
+    /**
+     * Moves the held item to the off hand for the air placements that follow, until {@link #endBatch()}.
+     */
+    public static void beginBatch() {
+        if (batchSwapped || placesWithMainHand()) return;
+        batchSwapped = swapHands();
+    }
+
+    public static void endBatch() {
+        if (!batchSwapped) return;
+        swapHands();
+        batchSwapped = false;
+    }
+
+    private static boolean placesWithMainHand() {
+        return mc.player != null && mc.hasSingleplayerServer() && mc.player.getAbilities().instabuild;
     }
 
     @Override
@@ -45,7 +68,7 @@ public class AirPlaceAction extends InteractAction {
         MultiPlayerGameMode interactionManager = mc.gameMode;
         if (mc.player == null || connection == null || interactionManager == null) return;
 
-        if (mc.hasSingleplayerServer() && mc.player.getAbilities().instabuild) {
+        if (placesWithMainHand()) {
             BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
             mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, blockHitResult);
             //? >=26.3 {
@@ -56,12 +79,8 @@ public class AirPlaceAction extends InteractAction {
             return;
         }
 
-        // The raw SWAP_ITEM_WITH_OFFHAND packet swaps hands server-side only, so the client
-        // inventory must be swapped in lockstep or the useItemOn prediction below runs against
-        // a stale offhand stack and the two sides drift apart (the old offhand-eviction +
-        // slot-update-suppression approach; it dropped offhand items when the inventory was full).
-        swapHandStacksLocally(mc.player);
-        connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
+        boolean ownSwap = !batchSwapped;
+        if (ownSwap) swapHands();
 
         InteractionHand hand = InteractionHand.OFF_HAND;
         BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
@@ -72,18 +91,29 @@ public class AirPlaceAction extends InteractAction {
         mc.player.swing(InteractionHand.MAIN_HAND);
         connection.send(new ServerboundSwingPacket(hand));
         //?}
-        swapHandStacksLocally(mc.player);
-        connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
+        if (ownSwap) swapHands();
     }
 
     /**
-     * Mirrors what the server does when it receives SWAP_ITEM_WITH_OFFHAND
-     * (ServerGamePacketListenerImpl swaps the two hand stacks via setItemInHand).
+     * Swaps the main and off hand stacks on the server and mirrors it locally.
+     * The raw SWAP_ITEM_WITH_OFFHAND packet swaps hands server-side only (ServerGamePacketListenerImpl
+     * swaps the two hand stacks via setItemInHand), so the client inventory must be swapped in lockstep
+     * or the useItemOn prediction runs against a stale offhand stack and the two sides drift apart
+     * (the old offhand-eviction + slot-update-suppression approach; it dropped offhand items when the
+     * inventory was full).
+     *
+     * @return True if the swap was sent
      */
-    private void swapHandStacksLocally(LocalPlayer player) {
+    private static boolean swapHands() {
+        LocalPlayer player = mc.player;
+        ClientPacketListener connection = mc.getConnection();
+        if (player == null || connection == null) return false;
+
         ItemStack mainStack = player.getItemInHand(InteractionHand.MAIN_HAND);
         ItemStack offStack = player.getItemInHand(InteractionHand.OFF_HAND);
         player.setItemInHand(InteractionHand.MAIN_HAND, offStack);
         player.setItemInHand(InteractionHand.OFF_HAND, mainStack);
+        connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
+        return true;
     }
 }

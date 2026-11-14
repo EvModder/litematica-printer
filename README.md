@@ -7,6 +7,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- Places up to 9 blocks per tick instead of one (`printerPlacementsPerTick`, `printerInteractLimit`).
 - Moves items into an empty hotbar slot when one is free instead of replacing one in use.
 - Fixes airplace throwing out offhand item (`printerAirPlaceOffhandSlotSuppress` is now legacy; default off).
 - Fixes FreeLook drifting away from the camera rotation, and stops it from fighting with other mods' Freecams.
