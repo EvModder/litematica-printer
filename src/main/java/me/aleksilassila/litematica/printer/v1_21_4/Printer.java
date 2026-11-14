@@ -22,8 +22,9 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Printer {
     public static final Logger logger = LogManager.getLogger("litematica-printer");
@@ -36,7 +37,11 @@ public class Printer {
     private final Guides interactionGuides = new Guides();
     public static final InventoryManager inventoryManager = InventoryManager.getInstance();
     public static int inactivityCounter = 0;
-    static final LinkedList<BlockTimeout> blockPosTimeout = new LinkedList<>();
+    /**
+     * Positions the printer recently interacted with, mapped to the tick they may be tried again.
+     */
+    private static final Map<BlockPos, Integer> blockPosTimeout = new HashMap<>();
+    private static int tickCounter = 0;
     int delayCounter = 0;
     @Nullable
     public static Vec2 lastRotation = null;
@@ -60,8 +65,8 @@ public class Printer {
 
     public boolean onGameTick() {
         WorldSchematic worldSchematic = SchematicWorldHandler.getSchematicWorld();
-        blockPosTimeout.forEach((entry) -> entry.timer--);
-        blockPosTimeout.removeIf((entry) -> entry.timer <= 0);
+        tickCounter++;
+        blockPosTimeout.values().removeIf((expiry) -> expiry <= tickCounter);
 
         // If the inactivityCounter is greater than the inactive snap back value, then set the lastRotation to the current rotation
         // This is used to snap back to the last rotation when the player is inactive
@@ -89,14 +94,10 @@ public class Printer {
             if (mc.gui.screen() != null && !(mc.gui.screen() instanceof ChatScreen)) return false;
         }
 
-        List<BlockPos> positions = getReachablePositions();
-
-        if (PrinterConfig.BLOCK_TIMEOUT.getIntegerValue() != 0) {
-            positions = positions.stream().filter((pos) -> blockPosTimeout.stream().noneMatch((entry) -> entry.pos.equals(pos))).toList(); // From block timeout. Don't place already placed blocks.
-        }
-
         findBlock:
-        for (BlockPos position : positions) {
+        for (BlockPos position : getReachablePositions()) {
+            if (blockPosTimeout.containsKey(position)) continue; // From block timeout. Don't place already placed blocks.
+
             SchematicBlockState state = new SchematicBlockState(player.level(), worldSchematic, position);
             if (state.targetState.equals(state.currentState) || state.targetState.isAir()) continue;
 
@@ -180,22 +181,13 @@ public class Printer {
     }
 
     public static void addTimeout(BlockPos pos) {
-        blockPosTimeout.add(new BlockTimeout(pos, PrinterConfig.BLOCK_TIMEOUT.getIntegerValue()));
+        int timeout = PrinterConfig.BLOCK_TIMEOUT.getIntegerValue();
+        if (timeout > 0) blockPosTimeout.put(pos.immutable(), tickCounter + timeout);
     }
 
     public void rotate(float yaw, float pitch) {
         LitematicaMixinMod.freeLook.ticksSinceLastRotation = 0;
         this.player.setYRot(yaw);
         this.player.setXRot(pitch);
-    }
-
-    public static class BlockTimeout {
-        int timer = 0;
-        BlockPos pos;
-
-        public BlockTimeout(BlockPos pos, int timer) {
-            this.pos = pos;
-            this.timer = timer;
-        }
     }
 }
