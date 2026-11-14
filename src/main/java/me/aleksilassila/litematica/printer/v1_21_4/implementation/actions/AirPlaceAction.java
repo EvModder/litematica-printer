@@ -3,6 +3,7 @@ package me.aleksilassila.litematica.printer.v1_21_4.implementation.actions;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.InteractAction;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
+import me.aleksilassila.litematica.printer.v1_21_4.mixin.MixinAccessorMultiPlayerGameMode;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.LiquidBlock;
 import net.minecraft.client.Minecraft;
@@ -107,7 +108,10 @@ public class AirPlaceAction extends InteractAction {
     private static boolean swapHands() {
         LocalPlayer player = mc.player;
         ClientPacketListener connection = mc.getConnection();
-        if (player == null || connection == null) return false;
+        if (player == null || connection == null || mc.gameMode == null) return false;
+
+        // The server swaps the slot it believes is selected, which is stale if the slot changed this tick.
+        ((MixinAccessorMultiPlayerGameMode) mc.gameMode).syncSelectedSlot();
 
         ItemStack mainStack = player.getItemInHand(InteractionHand.MAIN_HAND);
         ItemStack offStack = player.getItemInHand(InteractionHand.OFF_HAND);

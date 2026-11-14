@@ -7,6 +7,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- Fixes airplace placing from the wrong slot after the hotbar selection changed in the same tick.
 - Places up to 9 blocks per tick instead of one (`printerPlacementsPerTick`, `printerInteractLimit`).
 - Moves items into an empty hotbar slot when one is free instead of replacing one in use.
 - Fixes airplace throwing out offhand item (`printerAirPlaceOffhandSlotSuppress` is now legacy; default off).
