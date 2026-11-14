@@ -186,7 +186,11 @@ abstract public class PlacementGuide extends Guide {
 //            } else {
 //                return true;
 //            }
+            //? >=26.3 {
+            /*return blockState.isSolid() && !blockState.is(Blocks.COBWEB) && !blockState.is(Blocks.BAMBOO_SAPLING);*/
+            //?} else {
             return blockState.blocksMotion();
+            //?}
         }
 
         return true;

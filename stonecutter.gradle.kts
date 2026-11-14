@@ -7,6 +7,9 @@ stonecutter.active("26.2")
 
 stonecutter.parameters {
     replacements {
+        string(current.parsed >= "26.3") {
+            replace("RedStoneWireBlock", "RedstoneWireBlock")
+        }
         // Minecraft renamed these between 1.21.4 and the unobfuscated 26.x line.
         // Differences that change control flow live behind //? conditionals instead.
         string(current.parsed < "26.1") {
@@ -18,13 +21,12 @@ stonecutter.parameters {
             replace(".setSelectedSlot(hotbarSlot);", ".selected = hotbarSlot;")
             replace(".setSelectedSlot(nextSlot);", ".selected = nextSlot;")
             replace(".setSelectedSlot(slot);", ".selected = slot;")
-            replace(".gui.screen()", ".screen")
+            replace("mc.gui.screen()", "mc.screen")
             replace("FarmlandBlock", "FarmBlock")
             replace(".mainCamera().yRot()", ".getMainCamera().getYRot()")
             replace(".invertMouseY()", ".invertYMouse()")
 
             // Litematica took Path instead of File from 0.28 onwards.
-            replace("import java.nio.file.Path;", "import java.io.File;")
             replace("invokeConstructor(Path file,", "invokeConstructor(File file,")
             replace("invokeConstructor(file.toPath(),", "invokeConstructor(file,")
             replace("writeToFile(out.toPath(),", "writeToFile(out,")

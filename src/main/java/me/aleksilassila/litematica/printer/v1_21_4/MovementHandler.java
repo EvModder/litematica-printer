@@ -207,6 +207,10 @@ public class MovementHandler {
     }
 
     static boolean isKeyPressed(KeyMapping keyBinding) {
+        //? >=26.3 {
+        /*return InputConstants.isKeyDown(((MixinAccessorKeyBinding) keyBinding).getBoundKey().getValue());*/
+        //?} else {
         return InputConstants.isKeyDown(Minecraft.getInstance().getWindow(), ((MixinAccessorKeyBinding) keyBinding).getBoundKey().getValue());
+        //?}
     }
 }

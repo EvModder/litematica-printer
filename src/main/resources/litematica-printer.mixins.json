@@ -9,6 +9,7 @@
   ],
   "client": [
     "AxeItemAccessor",
+    "MatchingBlocksPredicateAccessor",
     "ButtonListenerMixin",
     "ConfigsMixin",
     "GuiConfigsMixin",

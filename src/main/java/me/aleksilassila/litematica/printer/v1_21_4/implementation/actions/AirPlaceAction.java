@@ -10,7 +10,12 @@ import net.minecraft.client.multiplayer.ClientPacketListener;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.multiplayer.MultiPlayerGameMode;
 import net.minecraft.world.item.ItemStack;
+//? <26.3 {
 import net.minecraft.network.protocol.game.ServerboundSwingPacket;
+//?}
+//? >=26.3 {
+/*import net.minecraft.world.item.component.SwingAnimation;*/
+//?}
 import net.minecraft.network.protocol.game.ServerboundPlayerActionPacket;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionHand;
@@ -43,7 +48,11 @@ public class AirPlaceAction extends InteractAction {
         if (mc.hasSingleplayerServer() && mc.player.getAbilities().instabuild) {
             BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
             mc.gameMode.useItemOn(mc.player, InteractionHand.MAIN_HAND, blockHitResult);
+            //? >=26.3 {
+            /*mc.player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false);*/
+            //?} else {
             mc.player.swing(InteractionHand.MAIN_HAND);
+            //?}
             return;
         }
 
@@ -57,8 +66,12 @@ public class AirPlaceAction extends InteractAction {
         InteractionHand hand = InteractionHand.OFF_HAND;
         BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
         interactionManager.useItemOn(mc.player, hand, blockHitResult);
+        //? >=26.3 {
+        /*mc.player.swing(InteractionHand.MAIN_HAND, SwingAnimation.DEFAULT, false);*/
+        //?} else {
         mc.player.swing(InteractionHand.MAIN_HAND);
         connection.send(new ServerboundSwingPacket(hand));
+        //?}
         swapHandStacksLocally(mc.player);
         connection.send(new ServerboundPlayerActionPacket(ServerboundPlayerActionPacket.Action.SWAP_ITEM_WITH_OFFHAND, BlockPos.ZERO, Direction.DOWN));
     }

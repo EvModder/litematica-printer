@@ -83,14 +83,23 @@ public class MixinClientPlayerEntity extends AbstractClientPlayer {
     }
 
     @Inject(method = "openTextEdit", at = @At("HEAD"), cancellable = true)
+    //? >=26.3 {
+    /*public void openEditSignScreen(SignBlockEntity sign, net.minecraft.world.level.block.entity.SignTextSlot front, CallbackInfo ci) {*/
+    //?} else {
     public void openEditSignScreen(SignBlockEntity sign, boolean front, CallbackInfo ci) {
+    //?}
         getTargetSignEntity(sign).ifPresent(signBlockEntity -> {
+            //? >=26.3 {
+            /*ServerboundSignUpdatePacket packet = new ServerboundSignUpdatePacket(sign.getBlockPos(),
+                    signBlockEntity.getText(front).getMessages(false).stream().map(Component::getString).toList(), front);*/
+            //?} else {
             ServerboundSignUpdatePacket packet = new ServerboundSignUpdatePacket(sign.getBlockPos(),
                     front,
                     signBlockEntity.getText(front).getMessage(0, false).getString(),
                     signBlockEntity.getText(front).getMessage(1, false).getString(),
                     signBlockEntity.getText(front).getMessage(2, false).getString(),
                     signBlockEntity.getText(front).getMessage(3, false).getString());
+            //?}
             this.connection.send(packet);
             ci.cancel();
         });

@@ -25,7 +25,11 @@ public class UseItemActionImpl extends InteractAction {
         if (!result.consumesAction()) {
             if (PrinterConfig.PRINTER_DEBUG_LOG.getBooleanValue()) System.out.println("Failed to interact with block got " + result);
         }
+        //? >=26.3 {
+        /*mc.player.swing(InteractionHand.MAIN_HAND, net.minecraft.world.item.component.SwingAnimation.DEFAULT, false);*/
+        //?} else {
         mc.player.swing(InteractionHand.MAIN_HAND);
+        //?}
         return result;
     }
 }

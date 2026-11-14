@@ -5,7 +5,11 @@ import fi.dy.masa.litematica.util.FileType;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.gen.Invoker;
 
+//? >=26.1 {
 import java.nio.file.Path;
+//?} else {
+/*import java.io.File;*/
+//?}
 
 /**
  * @author IceTank
