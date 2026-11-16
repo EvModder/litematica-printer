@@ -163,6 +163,21 @@ public class GeneralPlacementGuide extends PlacementGuide {
         }
     }
 
+    /**
+     * The state placing the block would produce, with waterlogging taken from the target: the fluid already at the
+     * position decides it, not the click, and {@link me.aleksilassila.litematica.printer.v1_21_4.guides.interaction.WaterLogGuide}
+     * adds missing water afterwards.
+     */
+    private @Nullable BlockState getPlacementResult(LocalPlayer player, PrinterPlacementContext context) {
+        BlockState result = getRequiredItemAsBlock(player)
+                .orElse(targetState.getBlock())
+                .getStateForPlacement(context);
+        if (result != null && result.hasProperty(BlockStateProperties.WATERLOGGED) && targetState.hasProperty(BlockStateProperties.WATERLOGGED)) {
+            result = result.setValue(BlockStateProperties.WATERLOGGED, targetState.getValue(BlockStateProperties.WATERLOGGED));
+        }
+        return result;
+    }
+
     @Nullable
     public PrinterPlacementContext getContextByStrictLook(LocalPlayer player) {
         if (contextCache != null && !LitematicaMixinMod.DEBUG && !PrinterConfig.NO_PLACEMENT_CACHE.getBooleanValue() && contextCache.isRaytrace == PrinterConfig.RAYCAST.getBooleanValue())
@@ -237,9 +252,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
                         PrinterPlacementContext rayTraceContext = new PrinterPlacementContext(player, hitResult, requiredItem, slot, relativeDirection, requiresShift);
                         rayTraceContext.canStealth = true;
                         rayTraceContext.isRaytrace = true;
-                        BlockState resultState = getRequiredItemAsBlock(player)
-                                .orElse(targetState.getBlock())
-                                .getStateForPlacement(rayTraceContext);
+                        BlockState resultState = getPlacementResult(player, rayTraceContext);
 
                         if (resultState != null && correctObserverPlacement(targetState, resultState) && (statesEqual(resultState, targetState) || correctChestPlacement(targetState, resultState))) {
                             contextCache = rayTraceContext;
@@ -251,9 +264,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
                     BlockHitResult hitResult = new BlockHitResult(blockHit, side.getOpposite(), neighborPos, false);
                     PrinterPlacementContext context = new PrinterPlacementContext(player, hitResult, requiredItem, slot, relativeDirection, requiresShift);
                     context.canStealth = true;
-                    BlockState result = getRequiredItemAsBlock(player)
-                            .orElse(targetState.getBlock())
-                            .getStateForPlacement(context); // FIXME torch shift clicks another torch and getPlacementState is the clicked block, which is true
+                    BlockState result = getPlacementResult(player, context); // FIXME torch shift clicks another torch and getPlacementState is the clicked block, which is true
 
                     if (result != null && correctObserverPlacement(targetState, result) && (statesEqual(result, targetState) || correctChestPlacement(targetState, result))) {
                         contextCache = context;
@@ -304,7 +315,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
         {
             BlockHitResult hr = new BlockHitResult(Vec3.atCenterOf(state.blockPos), Direction.UP, state.blockPos, true);
             PrinterPlacementContext quick = new PrinterPlacementContext(player, hr, requiredItem, slot, null, false);
-            BlockState res = getRequiredItemAsBlock(player).orElse(targetState.getBlock()).getStateForPlacement(quick);
+            BlockState res = getPlacementResult(player, quick);
             if (res != null && correctObserverPlacement(targetState, res) && statesEqual(res, targetState)) {
                 contextCache = quick;
                 quick.isAirPlace = true;
@@ -338,9 +349,7 @@ public class GeneralPlacementGuide extends PlacementGuide {
 
                             BlockHitResult hitResult = new BlockHitResult(hitVec, side.getOpposite(), state.blockPos, true);
                             PrinterPlacementContext context = new PrinterPlacementContext(player, hitResult, requiredItem, slot, lookDirection, false);
-                            BlockState result = getRequiredItemAsBlock(player)
-                                    .orElse(targetState.getBlock())
-                                    .getStateForPlacement(context);
+                            BlockState result = getPlacementResult(player, context);
                             if (result != null && correctObserverPlacement(targetState, result) && statesEqual(result, targetState)) {
                                 contextCache = context;
                                 context.isAirPlace = true;
