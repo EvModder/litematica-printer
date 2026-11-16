@@ -19,14 +19,20 @@ abstract public class InteractAction extends Action {
 
     protected abstract InteractionResult interact(Minecraft client, LocalPlayer player, InteractionHand hand, BlockHitResult hitResult);
 
+    /**
+     * @return The position this interaction changes, which the printer leaves alone until the server has answered
+     */
+    protected BlockPos getAffectedPos() {
+        return context.hitResult.isInside() ? context.hitResult.getBlockPos() : context.hitResult.getBlockPos().relative(context.hitResult.getDirection());
+    }
+
     @Override
     public boolean send(Minecraft client, LocalPlayer player) {
         interact(client, player, InteractionHand.MAIN_HAND, context.hitResult);
 
         if (LitematicaMixinMod.DEBUG)
             System.out.println("InteractAction.send: Blockpos: " + context.getBlockPos() + " Side: " + context.getDirection() + " HitPos: " + context.getHitPos());
-        BlockPos pos = context.hitResult.isInside() ? context.hitResult.getBlockPos() : context.hitResult.getBlockPos().relative(context.hitResult.getDirection());
-        Printer.addTimeout(pos);
+        Printer.addTimeout(getAffectedPos());
         return true;
     }
 

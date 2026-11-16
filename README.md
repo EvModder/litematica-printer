@@ -7,6 +7,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- `printerWaterlogging` only fills blocks that need water, aims the bucket, and no longer stalls without one.
 - Places waterloggable blocks whether or not their spot already holds water.
 - Fixes airplace placing from the wrong slot after the hotbar selection changed in the same tick.
 - Places up to 9 blocks per tick instead of one (`printerPlacementsPerTick`, `printerInteractLimit`).

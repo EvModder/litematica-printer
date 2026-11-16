@@ -23,7 +23,7 @@ public class PrepareLook extends Action {
         this.context = context;
     }
 
-    static float[] getNeededRotations(LocalPlayer player, Vec3 vec) {
+    public static float[] getNeededRotations(LocalPlayer player, Vec3 vec) {
         Vec3 eyesPos = player.getEyePosition();
 
         double diffX = vec.x - eyesPos.x;

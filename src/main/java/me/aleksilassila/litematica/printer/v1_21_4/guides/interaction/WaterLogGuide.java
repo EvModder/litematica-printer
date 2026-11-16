@@ -4,6 +4,7 @@ package me.aleksilassila.litematica.printer.v1_21_4.guides.interaction;
 import me.aleksilassila.litematica.printer.v1_21_4.LitematicaMixinMod;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.*;
+import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
 import me.aleksilassila.litematica.printer.v1_21_4.guides.placement.GeneralPlacementGuide;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.PrinterPlacementContext;
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.UseItemActionImpl;
@@ -40,18 +41,16 @@ public class WaterLogGuide extends GeneralPlacementGuide {
 
     @Override
     public boolean canExecute(LocalPlayer player) {
-        if (!canWork) return false;
-        if (!(currentState.getBlock() instanceof SimpleWaterloggedBlock)) return false;
+        if (!canWork || !PrinterConfig.WATERLOGGING.getBooleanValue()) return false;
+        if (currentState.getBlock() != targetState.getBlock()) return false;
 
-        if (currentState.getValue(BlockStateProperties.WATERLOGGED) == null
-                || currentState.getValue(BlockStateProperties.WATERLOGGED) == targetState.getValue(BlockStateProperties.WATERLOGGED)) {
+        // Only adds water: a water bucket used on a block that is already waterlogged pours the water next to it.
+        if (!getProperty(targetState, BlockStateProperties.WATERLOGGED).orElse(false)
+                || getProperty(currentState, BlockStateProperties.WATERLOGGED).orElse(true)) {
             return false;
         }
 
-//        if (!super.canExecute(player)) return false;
-        List<ItemStack> requiredItems = getRequiredItems();
-        if (requiredItems.isEmpty() || requiredItems.stream().allMatch(i -> i.is(Items.AIR)))
-            return false;
+        if (!playerHasRightItem(player)) return false;
         for (Direction side : getPossibleSides()) {
             if (canSeeBlockFace(player, new BlockHitResult(Vec3.atCenterOf(state.blockPos), side.getOpposite(), state.blockPos.relative(side), false))) {
                 return true;
