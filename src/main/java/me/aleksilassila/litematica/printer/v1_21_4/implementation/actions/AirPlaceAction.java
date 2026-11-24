@@ -23,30 +23,37 @@ import net.minecraft.world.InteractionHand;
 import net.minecraft.world.phys.BlockHitResult;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import org.jetbrains.annotations.Nullable;
 
 public class AirPlaceAction extends InteractAction {
     private static final Minecraft mc = Minecraft.getInstance();
     /**
-     * Set while a batch keeps the placement item in the off hand, so its placements share one pair of swaps.
+     * The hand a batch places with while it keeps the item swapped into it, so its placements share one pair of swaps.
      */
-    private static boolean batchSwapped = false;
+    private static @Nullable InteractionHand batchHand = null;
 
     public AirPlaceAction(PrinterPlacementContext context) {
         super(context);
     }
 
+    private static InteractionHand otherHand(InteractionHand hand) {
+        return hand == InteractionHand.MAIN_HAND ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+    }
+
     /**
-     * Moves the held item to the off hand for the air placements that follow, until {@link #endBatch()}.
+     * Swaps the item to the other hand for the air placements that follow, until {@link #endBatch()}.
+     *
+     * @param holding The hand that holds the item
      */
-    public static void beginBatch() {
-        if (batchSwapped || placesWithMainHand()) return;
-        batchSwapped = swapHands();
+    public static void beginBatch(InteractionHand holding) {
+        if (batchHand != null || placesWithMainHand()) return;
+        if (swapHands()) batchHand = otherHand(holding);
     }
 
     public static void endBatch() {
-        if (!batchSwapped) return;
+        if (batchHand == null) return;
         swapHands();
-        batchSwapped = false;
+        batchHand = null;
     }
 
     private static boolean placesWithMainHand() {
@@ -60,11 +67,14 @@ public class AirPlaceAction extends InteractAction {
         if (!context.canPlace()) {
             return InteractionResult.FAIL;
         }
-        airPlace(pos);
+        airPlace(pos, hand);
         return InteractionResult.PASS;
     }
 
-    private void airPlace(BlockPos pos) {
+    /**
+     * @param holding The hand that holds the item, unless a batch has swapped it already
+     */
+    private void airPlace(BlockPos pos, InteractionHand holding) {
         ClientPacketListener connection = mc.getConnection();
         MultiPlayerGameMode interactionManager = mc.gameMode;
         if (mc.player == null || connection == null || interactionManager == null) return;
@@ -80,10 +90,11 @@ public class AirPlaceAction extends InteractAction {
             return;
         }
 
-        boolean ownSwap = !batchSwapped;
+        // The placement goes out between two hand swaps, with the hand the item is swapped into.
+        boolean ownSwap = batchHand == null;
         if (ownSwap) swapHands();
 
-        InteractionHand hand = InteractionHand.OFF_HAND;
+        InteractionHand hand = ownSwap ? otherHand(holding) : batchHand;
         BlockHitResult blockHitResult = new BlockHitResult(this.context.hitResult.getLocation(), this.context.hitResult.getDirection(), pos, true);
         interactionManager.useItemOn(mc.player, hand, blockHitResult);
         //? >=26.3 {

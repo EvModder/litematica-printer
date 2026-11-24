@@ -28,7 +28,7 @@ abstract public class InteractAction extends Action {
 
     @Override
     public boolean send(Minecraft client, LocalPlayer player) {
-        interact(client, player, InteractionHand.MAIN_HAND, context.hitResult);
+        interact(client, player, Printer.inventoryManager.getHand(player, context.getItemInHand()), context.hitResult);
 
         if (LitematicaMixinMod.DEBUG)
             System.out.println("InteractAction.send: Blockpos: " + context.getBlockPos() + " Side: " + context.getDirection() + " HitPos: " + context.getHitPos());

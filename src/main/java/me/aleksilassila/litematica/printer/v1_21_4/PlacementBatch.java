@@ -7,6 +7,7 @@ import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.AirPla
 import me.aleksilassila.litematica.printer.v1_21_4.implementation.actions.InteractActionImpl;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import org.jetbrains.annotations.Nullable;
@@ -16,7 +17,7 @@ import java.util.Set;
 
 /**
  * Places several blocks of one item within a single tick. The item is selected once and, when air placing,
- * moved to the off hand once for the whole batch instead of for every block.
+ * swapped to the other hand once for the whole batch instead of for every block.
  */
 public class PlacementBatch implements AutoCloseable {
     private final Minecraft client;
@@ -86,19 +87,20 @@ public class PlacementBatch implements AutoCloseable {
         if (unavailable.contains(required.getItem())) return false;
 
         // Selecting an item outside the hotbar moves it there, so only try that for the first one each tick.
-        boolean inHotbar = Printer.inventoryManager.getHotbarSlotWithItem(player, required) != -1;
-        if ((!inHotbar && !unavailable.isEmpty()) || !Printer.inventoryManager.select(required)) {
+        boolean atHand = Printer.inventoryManager.isAtHand(player, required);
+        if ((!atHand && !unavailable.isEmpty()) || !Printer.inventoryManager.select(required)) {
             unavailable.add(required.getItem());
             return false;
         }
 
         item = required.getItem();
         airPlace = context.isAirPlace;
-        // Stop when the selected stack runs out; the next tick selects another one.
+        InteractionHand hand = Printer.inventoryManager.getHand(player, required);
+        // Stop when the held stack runs out; the next tick selects another one.
         if (!player.getAbilities().instabuild) {
-            remaining = Math.min(remaining, player.getMainHandItem().getCount());
+            remaining = Math.min(remaining, player.getItemInHand(hand).getCount());
         }
-        if (airPlace) AirPlaceAction.beginBatch();
+        if (airPlace) AirPlaceAction.beginBatch(hand);
         return true;
     }
 

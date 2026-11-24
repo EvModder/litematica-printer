@@ -63,6 +63,7 @@ public class PrinterConfig {
     public static final ConfigDouble PRINTER_AIRPLACE_RANGE = new ConfigDouble("printerAirPlaceRange", 5, 0, 10, "Range at which the printer can air place at");
     public static final ConfigBoolean PRINTER_AIRPLACE_FLOATING_ONLY = new ConfigBoolean("printerAirPlaceFloatingOnly", false, "Only attempt to air place if the block position is surrounded by air.");
     public static final ConfigInteger PRINTER_MIN_INACTIVE_TIME_AIR_PLACE = new ConfigInteger("printerMinInactiveTimeAirPlace", 0, "Minimum time in ticks to wait before placing a block in the air.");
+    public static final ConfigBoolean USE_OFFHAND = new ConfigBoolean("printerUseOffhand", true, "Use an item held in the off hand from there instead of selecting it in the hotbar.");
     public static final ConfigString PRINTER_HOTBAR_SLOTS = new ConfigString("printerHotbarSlots", "3,4,5,6,7,8,9", "Hotbar slots to use for the printer. Numbers from 1-9 separated by commas.");
     public static final ConfigBoolean AUTO_CONVERT_SCHEMATIC_TO_LITEMATIC_ON_LOAD = new ConfigBoolean("autoConvertSchematicToLitematicOnLoad", false, "Automatically convert schematic files to litematic files when loading them.");
     public static final ConfigBoolean PRINTER_PLACE_OBSERVERS_LAST = new ConfigBoolean("printerPlaceObserversLast", false, "Only place observers when the block infront of them in the schematic is either air or already placed in the world.");
@@ -103,6 +104,7 @@ public class PrinterConfig {
         list.add(PRINTER_AIRPLACE_RANGE);
         list.add(PRINTER_AIRPLACE_FLOATING_ONLY);
         list.add(PRINTER_MIN_INACTIVE_TIME_AIR_PLACE);
+        list.add(USE_OFFHAND);
         list.add(PRINTER_HOTBAR_SLOTS);
         list.add(AUTO_CONVERT_SCHEMATIC_TO_LITEMATIC_ON_LOAD);
         list.add(PRINTER_PLACE_OBSERVERS_LAST);

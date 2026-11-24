@@ -1,5 +1,6 @@
 package me.aleksilassila.litematica.printer.v1_21_4.guides;
 
+import me.aleksilassila.litematica.printer.v1_21_4.Printer;
 import me.aleksilassila.litematica.printer.v1_21_4.SchematicBlockState;
 import me.aleksilassila.litematica.printer.v1_21_4.actions.Action;
 import me.aleksilassila.litematica.printer.v1_21_4.config.PrinterConfig;
@@ -8,6 +9,7 @@ import me.aleksilassila.litematica.printer.v1_21_4.implementation.BlockHelperImp
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.CoralBlock;
 import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
@@ -44,7 +46,8 @@ abstract public class Guide extends BlockHelperImpl {
             }
         }
 
-        return -1;
+        boolean inOffHand = Printer.inventoryManager.getHand(player, itemStack) == InteractionHand.OFF_HAND;
+        return inOffHand ? Inventory.SLOT_OFFHAND : -1;
     }
 
     protected int getRequiredItemStackSlot(LocalPlayer player) {

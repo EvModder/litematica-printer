@@ -7,6 +7,7 @@ Build with `./gradlew build` (Java 25).
 
 ## Changes from upstream
 
+- Uses an item held in the off hand from there, without changing the hotbar slot (`printerUseOffhand`).
 - New defaults: air place and real rotations on; Grim rotation, third-person FreeLook and ghost item fix off.
 - `printerWaterlogging` only fills blocks that need water, aims the bucket, and no longer stalls without one.
 - Places waterloggable blocks whether or not their spot already holds water.

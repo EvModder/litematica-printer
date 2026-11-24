@@ -183,10 +183,33 @@ public class InventoryManager {
         return count;
     }
 
+    /**
+     * An item held in the off hand is used from there, which leaves the selected slot alone.
+     * The main hand wins when both hold it, like it does for a vanilla click.
+     */
+    public InteractionHand getHand(LocalPlayer player, ItemStack itemStack) {
+        boolean offHand = PrinterConfig.USE_OFFHAND.getBooleanValue()
+                && !player.getAbilities().instabuild
+                && !itemStack.isEmpty()
+                && ItemStack.isSameItem(player.getOffhandItem(), itemStack)
+                && !ItemStack.isSameItem(player.getMainHandItem(), itemStack);
+        return offHand ? InteractionHand.OFF_HAND : InteractionHand.MAIN_HAND;
+    }
+
+    /**
+     * @return True if the item can be used this tick, without moving it to the hotbar first
+     */
+    public boolean isAtHand(LocalPlayer player, ItemStack itemStack) {
+        return getHand(player, itemStack) == InteractionHand.OFF_HAND || getHotbarSlotWithItem(player, itemStack) != -1;
+    }
+
     public boolean select(ItemStack itemStack) {
         LocalPlayer player = mc.player;
         if (player == null || mc.gameMode == null) {
             return false;
+        }
+        if (itemStack != null && getHand(player, itemStack) == InteractionHand.OFF_HAND) {
+            return true;
         }
 
         // Swap logic start
