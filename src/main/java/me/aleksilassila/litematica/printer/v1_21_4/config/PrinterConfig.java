@@ -35,8 +35,8 @@ public class PrinterConfig {
     public static final ConfigInteger BLOCK_TIMEOUT = new ConfigInteger("printerBlockTimeout", 10, 0, 100, "How many ticks to wait before trying to place the same block again.");
     public static final ConfigInteger INTERACT_LIMIT = new ConfigInteger("printerInteractLimit", 9, 0, 100, "Maximum block interactions sent to the server within printerInteractTimeframe, counting your own clicks.\nThe printer waits instead of exceeding it. 0 = no limit.");
     public static final ConfigInteger INTERACT_TIMEFRAME = new ConfigInteger("printerInteractTimeframe", 310, 50, 5000, "Length in milliseconds of the time frame printerInteractLimit applies to.");
-    public static final ConfigBoolean ROTATE_PLAYER = new ConfigBoolean("printerRotatePlayer", false, "Rotate the player to face the block to place.");
-    public static final ConfigBoolean PRINTER_GRIM_ROTATION = new ConfigBoolean("printerGrimRotate", true, "Allows you to place blocks anywhere while walking or using baritone.");
+    public static final ConfigBoolean ROTATE_PLAYER = new ConfigBoolean("printerRotatePlayer", true, "Rotate the player to face the block to place.");
+    public static final ConfigBoolean PRINTER_GRIM_ROTATION = new ConfigBoolean("printerGrimRotate", false, "Allows you to place blocks anywhere while walking or using baritone.");
     public static final ConfigBoolean STOP_ON_MOVEMENT = new ConfigBoolean("printerStopOnMovement", false, "Stop the printer if the player velocity is to high.");
     public static final ConfigInteger INVENTORY_DELAY = new ConfigInteger("printerInventoryDelay", 10, 0, 100, "The delay between each inventory action. 0 = no delay.");
     public static final ConfigOptionList PRINTER_INVENTORY_MANAGEMENT_MODE = new ConfigOptionList("printerInventoryManagementMode", InventoryManagementModeEnum.LEAST_USED, "Inventory management mode. Rolling = cycle through the hotbar, Least Used = use the least used slot in the hotbar.");
@@ -47,7 +47,7 @@ public class PrinterConfig {
     public static final ConfigBoolean MOVE_WHILE_IN_INVENTORY = new ConfigBoolean("printerMoveWhileInInventory", false, "Allows the player to move while the player inventory is open.");
     public static final ConfigBoolean FREE_LOOK = new ConfigBoolean("printerFreeLook", false, "Free look mode. Allows you to look around while the printer is active.");
     public static final ConfigHotkey FREE_LOOK_TOGGLE = new ConfigHotkey("printerFreeLookToggle", "", KeybindSettings.MODIFIER_INGAME, "Free look mode. Allows you to look around while the printer is active.");
-    public static final ConfigBoolean FREE_LOOK_THIRD_PERSON = new ConfigBoolean("printerFreeLookThirdPerson", true, "Auto switches the camera to third person when free look is enabled.");
+    public static final ConfigBoolean FREE_LOOK_THIRD_PERSON = new ConfigBoolean("printerFreeLookThirdPerson", false, "Auto switches the camera to third person when free look is enabled.");
     public static final ConfigInteger FREE_LOOK_LOOK_BACK = new ConfigInteger("printerFreeLookLookBackDelay", 1, 0, 100, "Time in ticks until the player character is rotated back to the camera view. 0 to disable.");
     public static final ConfigBoolean FREE_LOOK_LOOK_BACK_ALWAYS_ROTATE_PLAYER = new ConfigBoolean("printerFreeLookLookBackAlwaysRotatePlayer", false, "Always rotate the player back to the camera view.\nMakes it more compatible with Baritone edge cases but is more intrusive and might cause other issues.");
     public static final ConfigBoolean STRICT_BLOCK_FACE_CHECK = new ConfigBoolean("printerStrictBlockFaceCheck", true, "Places only against block faces that are facing the player.");
@@ -56,10 +56,10 @@ public class PrinterConfig {
     public static final ConfigBoolean PRINTER_IGNORE_ROTATION = new ConfigBoolean("printerIgnoreRotation", false, "Ignore the block rotation when placing.");
     public static final ConfigBoolean PRINTER_ALLOW_NONE_EXACT_STATES = new ConfigBoolean("printerAllowNoneExactStates", false, "Allow none exact block states to be placed.\nThis includes things like lichen, muchroom stems, etc.");
     public static final ConfigBoolean PRINTER_DISABLE_IN_GUIS = new ConfigBoolean("printerDisableInGuis", true, "Disable the printer in GUIs.");
-    public static final ConfigBoolean PRINTER_AIRPLACE = new ConfigBoolean("printerAirPlace", false, "Place blocks in the air.");
+    public static final ConfigBoolean PRINTER_AIRPLACE = new ConfigBoolean("printerAirPlace", true, "Place blocks in the air.");
     public static final ConfigBoolean PRINTER_AIRPLACE_ONLY = new ConfigBoolean("printerAirPlaceOnly", false, "Attempt to air place only when air place is enabled.");
     public static final ConfigBoolean PRINTER_AIRPLACE_OFFHAND_SLOT_SUPPRESS = new ConfigBoolean("printerAirPlaceOffhandSlotSuppress", false, "Suppress off-hand slot updates when air placing. Legacy option: air place now mirrors hand swaps client-side, so server slot updates match local state and suppressing them only prevents the client from self-correcting after a rejected placement. Leave off unless you see off-hand flicker.");
-    public static final ConfigBoolean PRINTER_SUPER_CHINESE_GHOST_ITEM_FIX = new ConfigBoolean("printerSuperChineseGhostItemFix", true, "Fixes ghost items in the inventory when placing a lot of blocks really fast.");
+    public static final ConfigBoolean PRINTER_SUPER_CHINESE_GHOST_ITEM_FIX = new ConfigBoolean("printerSuperChineseGhostItemFix", false, "Fixes ghost items in the inventory when placing a lot of blocks really fast.");
     public static final ConfigDouble PRINTER_AIRPLACE_RANGE = new ConfigDouble("printerAirPlaceRange", 5, 0, 10, "Range at which the printer can air place at");
     public static final ConfigBoolean PRINTER_AIRPLACE_FLOATING_ONLY = new ConfigBoolean("printerAirPlaceFloatingOnly", false, "Only attempt to air place if the block position is surrounded by air.");
     public static final ConfigInteger PRINTER_MIN_INACTIVE_TIME_AIR_PLACE = new ConfigInteger("printerMinInactiveTimeAirPlace", 0, "Minimum time in ticks to wait before placing a block in the air.");
